@@ -81,6 +81,27 @@ fun demorg_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" 
 "demorg_formula T = T" |
 "demorg_formula F = F"
 
+fun nnf_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
+"nnf_formula (Pred p args) = Pred p args" |
+"nnf_formula (And \<phi>1 \<phi>2) = And (nnf_formula \<phi>1) (nnf_formula \<phi>2)" |
+"nnf_formula (Or \<phi>1 \<phi>2) = Or (nnf_formula \<phi>1) (nnf_formula \<phi>2)" |
+"nnf_formula (Not \<phi>) = (case nnf_formula \<phi> of
+  Pred p args \<Rightarrow> Not (Pred p args) |
+  And \<psi>1 \<psi>2 \<Rightarrow> demorg_formula (Not (And \<psi>1 \<psi>2)) |
+  Or \<psi>1 \<psi>2 \<Rightarrow> demorg_formula (Not (Or \<psi>1 \<psi>2)) |
+  Not \<psi> \<Rightarrow> \<psi> |
+  Equal t1 t2 \<Rightarrow> Not (Equal t1 t2) |
+  Forall v \<psi> \<Rightarrow> Exists v (Not \<psi>) |
+  Exists v \<psi> \<Rightarrow> Forall v (Not \<psi>) |
+  T \<Rightarrow> F |
+  F \<Rightarrow> T
+)" |
+"nnf_formula (Equal t1 t2) = Equal t1 t2" |
+"nnf_formula (Forall v \<phi>) = Forall v (nnf_formula \<phi>)" |
+"nnf_formula (Exists v \<phi>) = Exists v (nnf_formula \<phi>)" |
+"nnf_formula T = T" |
+"nnf_formula F = F"
+
 (*TODO: erweitern *)
 lemma excluded_middle: "eval_formula (Or f (Not f)) vI fI pI"
   by auto
