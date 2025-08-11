@@ -23,6 +23,7 @@ fun simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" wh
 "simp_formula (Not f) = (case simp_formula f of
   T \<Rightarrow> F |
   F \<Rightarrow> T |
+  Not f1 \<Rightarrow> f1 |
   f' \<Rightarrow> Not f'
 )" |
 "simp_formula (Equal t1 t2) = Equal t1 t2" |
