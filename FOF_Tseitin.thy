@@ -3,8 +3,6 @@ theory FOF_Tseitin
 begin
 
 inductive is_prop :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
-True: "is_prop T" |
-False: "is_prop F" |
 Prop: "is_prop (Pred P [])" |
 And: "is_prop f1 \<Longrightarrow> is_prop f2 \<Longrightarrow> is_prop (And f1 f2)" |
 Or: "is_prop f1 \<Longrightarrow> is_prop f2 \<Longrightarrow> is_prop (Or f1 f2)" |
@@ -40,8 +38,6 @@ type_synonym ('v, 'f, 'p) tseitin_asgnm = "'p \<times> ('v, 'f, 'p) formula"
 type_synonym ('v, 'f, 'p) tseitin_asgnm_conv = "('v, 'f, 'p) formula \<times> ('v, 'f, 'p) formula"
 
 fun tseitin_occup_var :: "('v, 'f, 'p) formula \<Rightarrow> 'p set" where
-"tseitin_occup_var T = {}" |
-"tseitin_occup_var F = {}" |
 "tseitin_occup_var (Pred p []) = {p}" |
 "tseitin_occup_var (Not (Pred p [])) = {p}" |
 "tseitin_occup_var (And f1 f2) = tseitin_occup_var f1 \<union> tseitin_occup_var f2" |
@@ -49,9 +45,7 @@ fun tseitin_occup_var :: "('v, 'f, 'p) formula \<Rightarrow> 'p set" where
 "tseitin_occup_var _ = {}"
 
 fun tseitin_list :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula list" where
-"tseitin_list T = [T]" |
-"tseitin_list F = [F]" |
-"tseitin_list (Pred p []) = [Pred p []]" |
+"tseitin_list (Pred p []) = []" |
 "tseitin_list (Not (Pred p [])) = [Not (Pred p [])]" |
 "tseitin_list (And f1 f2) = [And f1 f2] @ tseitin_list f1 @ tseitin_list f2" |
 "tseitin_list (Or f1 f2) = [Or f1 f2] @ tseitin_list f1 @ tseitin_list f2" |
@@ -85,8 +79,6 @@ fun tseitin_subst_formula ::
 fun tseitin_subst_subformula :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm list \<Rightarrow> ('v, 'f, 'p) formula" where
 "tseitin_subst_subformula f [] = f" |
-"tseitin_subst_subformula T _ = T" |
-"tseitin_subst_subformula F _ = F" |
 "tseitin_subst_subformula (Pred p []) _ = Pred p []" |
 "tseitin_subst_subformula (Not (Pred p [])) _ = Not (Pred p [])" |
 "tseitin_subst_subformula (And f1 f2) as = 
@@ -110,25 +102,20 @@ fun tseitin_conv_asgnm ::
 "tseitin_conv_asgnm (\<tau>, f) = (tseitin_conv_var \<tau>, f)"
 
 fun tseitin_simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_simp_formula T = T" |
-"tseitin_simp_formula F = F" |
 "tseitin_simp_formula (Pred p []) = Pred p []" |
 "tseitin_simp_formula (And \<phi>1 \<phi>2) = And (tseitin_simp_formula \<phi>1) (tseitin_simp_formula \<phi>2)" |
 "tseitin_simp_formula (Or \<phi>1 \<phi>2) = Or (tseitin_simp_formula \<phi>1) (tseitin_simp_formula \<phi>2)" |
 "tseitin_simp_formula (Not \<phi>) = (case tseitin_simp_formula \<phi> of
-  T \<Rightarrow> F |
-  F \<Rightarrow> T |
-  (Not T) \<Rightarrow> T |
-  (Not F) \<Rightarrow> F |
-  (Not (Pred p [])) \<Rightarrow> Pred p [] |
-  Not \<psi> \<Rightarrow> \<psi> |
-  \<phi>' \<Rightarrow> Not \<phi>'
+  Pred p [] \<Rightarrow> Not (Pred p []) |
+  Not (Pred p []) \<Rightarrow> Pred p []
 )" |
 "tseitin_simp_formula \<phi> = \<phi>"
 
 fun tseitin_equiv_binding :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_equiv_binding (And _ _) l r = 
+"tseitin_equiv_binding (Pred _ []) l r = And l r" |
+"tseitin_equiv_binding (Not (Pred _ [])) l r = And l r" |
+"tseitin_equiv_binding (And _ _) l r =
   (let l' = distribute_formula l;
        r' = demorg_formula r
     in And l' r')" |
@@ -152,7 +139,7 @@ definition tseitin_get_head_var ::
 
 definition tseitin_conjunct_clauses :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula list \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_conjunct_clauses start cls = foldl And start cls"
+"tseitin_conjunct_clauses start cls = fold And cls start"
 
 fun tseitin_expansion :: "'p fresh \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
 "tseitin_expansion \<xi> \<phi> = 
@@ -174,6 +161,6 @@ theorem
   assumes "is_nnf \<phi>"
   assumes "is_prop \<phi>"
   shows "(\<exists>pI. eval_formula (tseitin_expansion fresh \<phi>) vI fI pI) \<longleftrightarrow> (\<exists>pI. eval_formula \<phi> vI fI pI)"
- sorry
+sorry
 *)
 end
