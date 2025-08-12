@@ -133,12 +133,16 @@ fun tseitin_transform_to_clause :: "('v, 'f, 'p) tseitin_asgnm_conv \<Rightarrow
     in tseitin_simp_formula equiv
 )"
 
-definition tseitin_get_head_var :: 
-"('v, 'f, 'p) tseitin_asgnm_conv list \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_get_head_var as = (if as \<noteq> [] then fst (hd as) else T)"
+fun tseitin_get_head_var :: 
+"('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm_conv list \<Rightarrow> ('v, 'f, 'p) formula" where
+"tseitin_get_head_var (Pred p []) [] = Pred p []" |
+"tseitin_get_head_var \<phi> [] = \<phi>" |
+"tseitin_get_head_var _ as = fst (hd as)"
 
-definition tseitin_conjunct_clauses :: 
+fun tseitin_conjunct_clauses :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula list \<Rightarrow> ('v, 'f, 'p) formula" where
+"tseitin_conjunct_clauses (Pred p []) [] = Pred p []" |
+"tseitin_conjunct_clauses start [] = start" |
 "tseitin_conjunct_clauses start cls = fold And cls start"
 
 fun tseitin_expansion :: "'p fresh \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
@@ -149,18 +153,41 @@ fun tseitin_expansion :: "'p fresh \<Rightarrow> ('v, 'f, 'p) formula \<Rightarr
        list_subst = tseitin_list_subst list_asgnm;
        list_conv = map tseitin_conv_asgnm list_subst;
        list_clause = map tseitin_transform_to_clause list_conv;
-       head_var = tseitin_get_head_var list_conv;
+       head_var = tseitin_get_head_var \<phi> list_conv;
        tseitin_\<phi>_cnf = tseitin_conjunct_clauses head_var list_clause
     in tseitin_\<phi>_cnf
 )"
 
-(*TODO:
-theorem
+theorem eval_tseitin_equiv_eval:
   fixes fresh :: "'p set \<Rightarrow> 'p" and \<phi> :: "('v, 'f, 'p) formula"
   assumes "\<And>\<P>. finite \<P> \<Longrightarrow> fresh \<P> \<notin> \<P>"
   assumes "is_nnf \<phi>"
   assumes "is_prop \<phi>"
   shows "(\<exists>pI. eval_formula (tseitin_expansion fresh \<phi>) vI fI pI) \<longleftrightarrow> (\<exists>pI. eval_formula \<phi> vI fI pI)"
-sorry
-*)
+proof -
+  have "is_prop \<phi>" using assms by simp
+  then show ?thesis
+  proof (induction \<phi> rule: is_prop.induct)
+    case (Prop P)
+    then show ?case
+    proof
+      assume "\<exists>pI. eval_formula (tseitin_expansion fresh (Pred P [])) vI fI pI"
+      then show "\<exists>pI. eval_formula (Pred P []) vI fI pI"
+        by simp
+    next
+      assume "\<exists>pI. eval_formula (Pred P []) vI fI pI"
+      then show "\<exists>pI. eval_formula (tseitin_expansion fresh (Pred P [])) vI fI pI"
+        by simp
+    qed
+  next
+    case (And f1 f2)
+    then show ?case sorry
+  next
+    case (Or f1 f2)
+    then show ?case sorry
+  next
+    case (Not f)
+    then show ?case sorry
+  qed
+qed
 end
