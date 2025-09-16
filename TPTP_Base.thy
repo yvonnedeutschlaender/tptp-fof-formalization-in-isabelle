@@ -8,11 +8,9 @@ Name 'n
 
 datatype role =
 Axiom |
-Definition |
 Lemma |
 Theorem |
-Conjecture |
-NConjecture
+Conjecture
 
 datatype ('n, 'v, 'f, 'p) annot_formula =
 FOF "'n name" role "('v, 'f, 'p) formula"

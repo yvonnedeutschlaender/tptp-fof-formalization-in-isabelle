@@ -13,7 +13,7 @@ fun eval_term :: "('v, 'f) fof_term \<Rightarrow> ('v, 'd) I_var \<Rightarrow> (
 "eval_term (Var x) vI _ = vI x" |
 "eval_term (Fun f args) vI fI = fI f (map (\<lambda>t. eval_term t vI fI) args)"
 
-datatype ('v, 'f, 'p) formula =
+datatype ('v, 'f, predicates_of_formula: 'p) formula =
 Pred 'p "('v, 'f) fof_term list" |
 And "('v, 'f, 'p) formula" "('v, 'f, 'p) formula" |
 Or "('v, 'f, 'p) formula" "('v, 'f, 'p) formula" |
