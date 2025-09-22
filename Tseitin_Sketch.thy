@@ -57,25 +57,14 @@ fun tseitin ::
       C\<^sub>3 = [Neg (v, []), Pos (v\<^sub>2, ts\<^sub>2), Pos (v\<^sub>1, ts\<^sub>1)]
      in (v, [], C\<^sub>1 # C\<^sub>2 # C\<^sub>3 # \<C>\<^sub>1 @ \<C>\<^sub>2, insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)))"
 
-fun formula_of_literal :: "('p \<times> ('v, 'f) fof_term list) literal \<Rightarrow> ('v, 'f, 'p) formula" where
-  "formula_of_literal (Pos (p, ts)) = Pred p ts" |
-  "formula_of_literal (Neg (p, ts)) = Not (Pred p ts)"
-
-definition formula_of_clause ::
-  "('p \<times> ('v, 'f) fof_term list) literal list \<Rightarrow> ('v, 'f, 'p) formula" where
-  "formula_of_clause Ls = fold (\<lambda>L. Or (formula_of_literal L)) Ls F"
-
-definition formula_of_clause_list ::
-  "('p \<times> ('v, 'f) fof_term list) literal list list \<Rightarrow> ('v, 'f, 'p) formula" where
-  "formula_of_clause_list Cs = fold (\<lambda>C. And (formula_of_clause C)) Cs T"
-
 inductive is_nnf where
   PosPred: "is_nnf (Pred p ts)" |
   NegPred: "is_nnf (Not (Pred p ts))" |
   And: "is_nnf \<phi>\<^sub>1 \<Longrightarrow> is_nnf \<phi>\<^sub>2 \<Longrightarrow> is_nnf (And \<phi>\<^sub>1 \<phi>\<^sub>2)" |
   Or: "is_nnf \<phi>\<^sub>1 \<Longrightarrow> is_nnf \<phi>\<^sub>2 \<Longrightarrow> is_nnf (Or \<phi>\<^sub>1 \<phi>\<^sub>2)"
 
-lemma predicates_of_formula_finite: "finite (predicates_of_formula \<phi>)"
+lemma predicates_of_formula_finite: 
+  "finite (predicates_of_formula \<phi>)"
 proof (induction \<phi>)
   case (Pred p args)
   then show ?case
@@ -132,7 +121,6 @@ next
   case (NegPred p ts)
 
   have "v = fresh \<V>" and
-       "ts = []" and
        "\<V>' = insert v {}"
     unfolding atomize_conj
     using NegPred.prems[simplified]
@@ -223,7 +211,6 @@ next
   case (NegPred p ts)
 
   have "v = fresh \<V>" and
-       "ts = []" and
        "\<V>' = insert v {}"
     unfolding atomize_conj
     using NegPred.prems[simplified]
@@ -250,7 +237,7 @@ next
 
   have
     "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
-    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
     unfolding atomize_conj
     using And.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
     by (metis Pair_inject)
@@ -271,7 +258,7 @@ next
         tseitin_finite_var_set)
 
   show ?case
-    using IH1 IH2 \<V>'_def \<open>v \<notin> \<V>\<close>
+    using IH1 IH2 \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> \<open>v \<notin> \<V>\<close>
     by auto
 next
   case (Or \<phi>\<^sub>1 \<phi>\<^sub>2)
@@ -288,7 +275,7 @@ next
 
   have
     "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
-    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
     unfolding atomize_conj
     using Or.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
     by (metis Pair_inject)
@@ -308,77 +295,420 @@ next
         fresh_spec te_\<phi>1 tseitin_finite_var_set)
 
   show ?case
-    using IH1 IH2 \<V>'_def \<open>v \<notin> \<V>\<close>
+    using IH1 IH2 \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> \<open>v \<notin> \<V>\<close>
     by auto
 qed
 
-(**) (*TODO*)
-lemma tseitin_fresh_var_in_fresh_var_set:
+lemma
+  fixes \<phi> :: "('v, 'f, 'p) formula"
   assumes "is_nnf \<phi>"
   assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
-(*  
-  assumes "\<V>' \<noteq> {}"
-*)
-  shows "v \<in> \<V>'"
+  shows
+    tseitin_generated_var: "v \<in> predicates_of_formula \<phi> \<union> \<V>'" and
+    tseitin_generated_vars: "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula \<phi> \<union> \<V>'"
+  unfolding atomize_conj
   using assms
-proof (induction \<phi> rule: is_nnf.induct)
-  case (PosPred p ts)
-  show ?case 
-    sorry
+proof (induction \<phi> arbitrary: \<V> v ts \<C> \<V>' rule: "is_nnf.induct")
+  case (PosPred p ts\<^sub>p)
+
+  have "v = p" and
+       "\<C> = []" and
+       "\<V>' = {}"
+    unfolding atomize_conj
+    using PosPred.prems[simplified]
+    by simp
+
+  have gen_var: 
+      "v \<in> predicates_of_formula (Pred p ts\<^sub>p) \<union> \<V>'"
+    by (simp add: \<open>v = p\<close>)
+
+  have gen_vars: 
+      "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula (Pred p ts\<^sub>p) \<union> \<V>'"
+    unfolding \<open>\<C> = []\<close> \<open>\<V>' = {}\<close>
+    by (simp add: \<open>v = p\<close>)
+
+  show ?case
+    using gen_var gen_vars
+    by simp
 next
-  case (NegPred p ts)
+  case (NegPred p ts\<^sub>p)
+
+  define \<C>\<^sub>0 :: "('p \<times> ('v, 'f) fof_term list) literal list list" where
+    "\<C>\<^sub>0 = [
+      [Neg (v, []), Neg (p, ts\<^sub>p)],
+      [Pos (v, []), Pos (p, ts\<^sub>p)]]"
+
+  have "v = fresh \<V>" and
+       "\<C> = \<C>\<^sub>0" and
+       "\<V>' = insert v {}"
+    unfolding atomize_conj
+    using NegPred.prems[simplified]
+    by (metis Pair_inject \<C>\<^sub>0_def)
+
+  have gen_var: 
+      "v \<in> predicates_of_formula (Not (Pred p ts\<^sub>p)) \<union> \<V>'"
+    by (simp add: \<open>\<V>' = {v}\<close>)
+
+  have gen_vars: 
+      "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula (Not (Pred p ts\<^sub>p)) \<union> \<V>'"
+    unfolding \<open>\<C> = \<C>\<^sub>0\<close> \<C>\<^sub>0_def \<open>\<V>' = insert v {}\<close>
+    by simp
+
   show ?case 
-    sorry
+    using gen_var gen_vars
+    by simp
 next
   case (And \<phi>\<^sub>1 \<phi>\<^sub>2)
-  show ?case 
-    sorry
+
+  obtain v\<^sub>1 ts\<^sub>1 \<C>\<^sub>1 \<V>\<^sub>1 where
+    te_\<phi>1: "tseitin fresh \<V> \<phi>\<^sub>1 = (v\<^sub>1, ts\<^sub>1, \<C>\<^sub>1, \<V>\<^sub>1)"
+    using prod_cases4 by blast
+
+  obtain v\<^sub>2 ts\<^sub>2 \<C>\<^sub>2 \<V>\<^sub>2 where
+    te_\<phi>2: "tseitin fresh (\<V> \<union> \<V>\<^sub>1) \<phi>\<^sub>2 = (v\<^sub>2, ts\<^sub>2, \<C>\<^sub>2, \<V>\<^sub>2)"
+    using prod_cases4 by blast
+
+  define \<C>\<^sub>0 :: "('p \<times> ('v, 'f) fof_term list) literal list list" where
+    "\<C>\<^sub>0 = [
+      [Neg (v, []), Pos (v\<^sub>1, ts\<^sub>1)], 
+      [Neg (v, []), Pos (v\<^sub>2, ts\<^sub>2)], 
+      [Pos (v, []), Neg (v\<^sub>1, ts\<^sub>1), Neg (v\<^sub>2, ts\<^sub>2)]]"
+
+  have
+    "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
+    "\<C> = \<C>\<^sub>0 @ \<C>\<^sub>1 @ \<C>\<^sub>2" and
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    using And.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified] 
+    by (auto simp add: \<C>\<^sub>0_def Let_def)
+
+  have gen_var: 
+      "v \<in> predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2) \<union> \<V>'"
+    by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
+
+  have gen_vars_\<phi>1: 
+      "insert v\<^sub>1 (\<Union>C \<in> set \<C>\<^sub>1. fst ` atom ` set C) = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+    using And.IH(1)[OF te_\<phi>1]
+    by simp
+
+  have gen_vars_\<phi>2: 
+      "insert v\<^sub>2 (\<Union>C \<in> set \<C>\<^sub>2. fst ` atom ` set C) = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+    using And.IH(2)[OF te_\<phi>2]
+    by simp
+
+  have gen_vars: 
+      "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2) \<union> \<V>'"
+    unfolding \<open>\<C> = \<C>\<^sub>0 @ \<C>\<^sub>1 @ \<C>\<^sub>2\<close> \<C>\<^sub>0_def \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+    using gen_vars_\<phi>1 gen_vars_\<phi>2
+    by fastforce
+
+  show ?case
+    using gen_var gen_vars
+    by simp
 next
   case (Or \<phi>\<^sub>1 \<phi>\<^sub>2)
-  show ?case 
-    sorry
+
+  obtain v\<^sub>1 ts\<^sub>1 \<C>\<^sub>1 \<V>\<^sub>1 where
+    te_\<phi>1: "tseitin fresh \<V> \<phi>\<^sub>1 = (v\<^sub>1, ts\<^sub>1, \<C>\<^sub>1, \<V>\<^sub>1)"
+    using prod_cases4 by blast
+
+  obtain v\<^sub>2 ts\<^sub>2 \<C>\<^sub>2 \<V>\<^sub>2 where
+    te_\<phi>2: "tseitin fresh (\<V> \<union> \<V>\<^sub>1) \<phi>\<^sub>2 = (v\<^sub>2, ts\<^sub>2, \<C>\<^sub>2, \<V>\<^sub>2)"
+    using prod_cases4 by blast
+
+  define \<C>\<^sub>0 :: "('p \<times> ('v, 'f) fof_term list) literal list list" where
+    "\<C>\<^sub>0 = [
+      [Pos (v, []), Neg (v\<^sub>1, ts\<^sub>1)],
+      [Pos (v, []), Neg (v\<^sub>2, ts\<^sub>2)],
+      [Neg (v, []), Pos (v\<^sub>2, ts\<^sub>2), Pos (v\<^sub>1, ts\<^sub>1)]]"
+
+  have
+    "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
+    "\<C> = \<C>\<^sub>0 @ \<C>\<^sub>1 @ \<C>\<^sub>2" and
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    using Or.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
+    by (auto simp add: \<C>\<^sub>0_def Let_def)
+
+  have gen_var: 
+      "v \<in> predicates_of_formula (Or \<phi>\<^sub>1 \<phi>\<^sub>2) \<union> \<V>'"
+    by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
+
+  have gen_vars_\<phi>1: 
+      "insert v\<^sub>1 (\<Union>C \<in> set \<C>\<^sub>1. fst ` atom ` set C) = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+    using Or.IH(1)[OF te_\<phi>1]
+    by simp
+
+  have gen_vars_\<phi>2: 
+      "insert v\<^sub>2 (\<Union>C \<in> set \<C>\<^sub>2. fst ` atom ` set C) = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+    using Or.IH(2)[OF te_\<phi>2]
+    by simp
+
+  have gen_vars: 
+      "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula (Or \<phi>\<^sub>1 \<phi>\<^sub>2) \<union> \<V>'"
+    unfolding \<open>\<C> = \<C>\<^sub>0 @ \<C>\<^sub>1 @ \<C>\<^sub>2\<close> \<C>\<^sub>0_def \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+    using gen_vars_\<phi>1 gen_vars_\<phi>2
+    by fastforce
+
+  show ?case
+    using gen_var gen_vars
+    by simp
 qed
 
-(*TODO*)
+fun formula_of_literal :: "('p \<times> ('v, 'f) fof_term list) literal \<Rightarrow> ('v, 'f, 'p) formula" where
+  "formula_of_literal (Pos (p, ts)) = Pred p ts" |
+  "formula_of_literal (Neg (p, ts)) = Not (Pred p ts)"
+
+definition formula_of_clause ::
+  "('p \<times> ('v, 'f) fof_term list) literal list \<Rightarrow> ('v, 'f, 'p) formula" where
+  "formula_of_clause Ls = fold (\<lambda>L. Or (formula_of_literal L)) Ls F"
+
+definition formula_of_clause_list ::
+  "('p \<times> ('v, 'f) fof_term list) literal list list \<Rightarrow> ('v, 'f, 'p) formula" where
+  "formula_of_clause_list Cs = fold (\<lambda>C. And (formula_of_clause C)) Cs T"
+
+lemma formula_of_clause_eq_fold_Or:
+  "formula_of_clause C = fold Or (map formula_of_literal C) F"
+  by (metis (no_types, lifting) ext comp_apply
+      fold_map formula_of_clause_def)
+
+lemma formula_of_clause_list_eq_fold_And:
+  "formula_of_clause_list Cs = fold And (map formula_of_clause Cs) T"
+  by (metis (no_types, lifting) ext comp_apply
+      fold_map formula_of_clause_list_def)
+
+lemma eval_formula_fold_And_iff:
+  "eval_formula (fold And xs \<phi>) vI fI pI \<longleftrightarrow>
+    eval_formula (fold And xs T) vI fI pI \<and> eval_formula \<phi> vI fI pI"
+proof (induction xs arbitrary: \<phi>)
+  case Nil
+  show ?case
+    by simp
+next
+  case (Cons a xs)
+  show ?case
+    by (metis eval_formula.simps(2)
+        fold_simps(2) local.Cons)
+qed
+
+lemma eval_formula_fold_And_append_iff:
+  "eval_formula (fold And (xs @ ys) \<phi>) vI fI pI \<longleftrightarrow>
+    eval_formula (fold And xs T) vI fI pI \<and>
+    eval_formula (fold And ys T) vI fI pI \<and>
+    eval_formula \<phi> vI fI pI"
+proof (induction xs)
+  case Nil
+  show ?case
+    by (metis append_self_conv2
+        eval_formula_fold_And_iff
+        fold_simps(1))
+next
+  case (Cons a xs)
+  show ?case
+    by (metis comp_apply
+        eval_formula_fold_And_iff
+        fold_append)
+qed
+
 lemma eval_formula_formula_of_clause_list_append_iff:
   "eval_formula (formula_of_clause_list (xs @ ys)) vI fI pI \<longleftrightarrow>
     eval_formula (formula_of_clause_list xs) vI fI pI \<and>
     eval_formula (formula_of_clause_list ys) vI fI pI"
-  sorry
+proof (induction xs)
+  case Nil
+  show ?case
+    unfolding formula_of_clause_list_def formula_of_clause_def
+    by simp
+next
+  case (Cons a xs)
 
-(*TODO*)
+  let ?xs = "map formula_of_clause xs"
+  let ?ys = "map formula_of_clause ys"
+  let ?a = "formula_of_clause a"
+
+  have "eval_formula (formula_of_clause_list ((a # xs) @ ys)) vI fI pI
+    \<longleftrightarrow> eval_formula (fold And (?xs @ ?ys) (And ?a T)) vI fI pI"
+    unfolding formula_of_clause_list_eq_fold_And
+    by simp
+  also have 
+      "... \<longleftrightarrow> eval_formula (fold And ?xs T) vI fI pI \<and> eval_formula (fold And ?ys T) vI fI pI \<and>
+               eval_formula (And ?a T) vI fI pI"
+    unfolding eval_formula_fold_And_append_iff
+    by simp
+  also have 
+      "... \<longleftrightarrow> (eval_formula (formula_of_clause_list (a # xs)) vI fI pI \<and>
+                    eval_formula (formula_of_clause_list ys) vI fI pI)"
+    by (metis calculation
+        eval_formula_fold_And_append_iff
+        eval_formula_fold_And_iff
+        formula_of_clause_list_eq_fold_And
+        map_append)
+  finally show ?case .
+qed
+
 lemma eval_formula_cong_wrt_predicate_evaluation:
   assumes "\<And>x. x \<in> predicates_of_formula \<phi> \<Longrightarrow> pI x = pI' x"
   shows "eval_formula \<phi> vI fI pI = eval_formula \<phi> vI fI pI'"
-  sorry
-
-(**) (*TODO*)
-lemma predicates_of_clause_list:
-  fixes \<phi> :: "('v, 'f, 'p) formula"
-  assumes "is_nnf \<phi>"
-  assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
-(*
-  assumes "\<C> \<noteq> []"
-*)
-  shows "predicates_of_formula (formula_of_clause_list \<C>)
-    = (predicates_of_formula \<phi>) \<union> \<V>' \<union> {v\<^sub>1}"
   using assms
-proof (induction \<phi> rule: is_nnf.induct)
-  case (PosPred p ts)
-  show ?case 
-    sorry
+proof (induction \<phi> arbitrary: vI)
+  case (Pred p args)
+  show ?case
+    by (simp add: Pred)
 next
-  case (NegPred p ts)
+  case (And \<phi>1 \<phi>2)
   show ?case 
-    sorry
+    by (simp add: And)
 next
-  case (And \<phi>\<^sub>1 \<phi>\<^sub>2)
+  case (Or \<phi>1 \<phi>2)
   show ?case 
-    sorry
+    by (simp add: Or)
 next
-  case (Or \<phi>\<^sub>1 \<phi>\<^sub>2)
+  case (Not \<phi>)
   show ?case 
-    sorry
+    by (simp add: Not)
+next
+  case (Equal t1 t2)
+  show ?case 
+    by (simp add: Equal)
+next
+  case (Forall v \<phi>)
+  have preds_of_\<phi>: "\<And>p. p \<in> predicates_of_formula \<phi> \<Longrightarrow> pI p = pI' p"
+    by (simp add: Forall.prems)
+  show ?case
+    using Forall.IH preds_of_\<phi> 
+    by auto
+next
+  case (Exists v \<phi>)
+  have preds_of_\<phi>: "\<And>p. p \<in> predicates_of_formula \<phi> \<Longrightarrow> pI p = pI' p"
+    by (simp add: Exists.prems)
+  show ?case
+    using Exists.IH preds_of_\<phi> 
+    by auto
+next
+  case T
+  show ?case
+    by simp
+next
+  case F
+  show ?case
+    by simp
+qed
+
+lemma predicates_of_formula_of_literal:
+  "predicates_of_formula (formula_of_literal l) = fst ` atom ` {l}"
+proof (cases l)
+  case (Pos pred)
+  obtain p ts where "pred = (p, ts)"
+    by fastforce
+  show ?thesis
+    by (simp add: Pos \<open>pred = (p, ts)\<close>)
+next
+  case (Neg pred)
+  obtain p ts where "pred = (p, ts)"
+    by fastforce
+  show ?thesis
+    using Neg \<open>pred = (p, ts)\<close> by auto
+qed
+
+lemma predicates_of_formula_fold_Or_map_formula_of_literal:
+  "predicates_of_formula (fold Or (map formula_of_literal C) \<phi>) =
+  fst ` atom ` set C \<union> predicates_of_formula \<phi>"
+proof (induction C arbitrary: \<phi>)
+  case Nil
+  show ?case
+    by simp
+next
+  case (Cons a C)
+
+  have clause_simp: "fold Or (map formula_of_literal (a # C)) \<phi>
+    = fold Or (map formula_of_literal C) (Or (formula_of_literal a) \<phi>)"
+    by simp
+
+  have "predicates_of_formula (fold Or (map formula_of_literal (a # C)) \<phi>)
+    = fst ` atom ` set C \<union> predicates_of_formula (Or (formula_of_literal a) \<phi>)"
+    unfolding clause_simp
+    using Cons.IH
+    by simp
+  also have "... = fst ` atom ` set C \<union> 
+    predicates_of_formula (formula_of_literal a) \<union> predicates_of_formula \<phi>"
+    by auto
+  also have "... = fst ` atom ` set C \<union> fst ` atom ` {a} \<union> predicates_of_formula \<phi>"
+    by (simp add: predicates_of_formula_of_literal)
+  also have "... = fst ` atom ` set (a # C) \<union> predicates_of_formula \<phi>"
+    by simp
+  finally show ?case .
+qed
+
+lemma predicates_of_formula_of_clause:
+  "predicates_of_formula (formula_of_clause C) = fst ` atom ` set C"
+proof (induction C)
+  case Nil
+  show ?case
+    unfolding formula_of_clause_def
+    by simp
+next
+  case (Cons a C)
+  have "predicates_of_formula (formula_of_clause (a # C))
+    = predicates_of_formula (fold Or (map formula_of_literal C) (Or (formula_of_literal a) F))"
+    unfolding formula_of_clause_eq_fold_Or
+    by simp
+  also have "... = predicates_of_formula (formula_of_clause C) \<union> 
+                   predicates_of_formula (formula_of_literal a) "
+    unfolding predicates_of_formula_fold_Or_map_formula_of_literal
+    by (simp add: local.Cons)
+  also have "... = fst ` atom ` set C \<union> fst ` atom ` {a}"
+    by (simp add: local.Cons predicates_of_formula_of_literal)
+  also have "... = fst ` atom ` set (a # C)"
+    by simp
+  finally show ?case .
+qed
+
+lemma predicates_of_formula_fold_And_map_formula_of_clause:
+  "predicates_of_formula (fold And (map formula_of_clause Cs) \<phi>) =
+  (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C)) \<union> predicates_of_formula \<phi>"
+proof (induction Cs arbitrary: \<phi>)
+  case Nil
+  show ?case
+    by simp
+next
+  case (Cons a Cs)
+
+  have clause_list_simp: "fold And (map formula_of_clause (a # Cs)) \<phi>
+    = (fold And (map formula_of_clause Cs) (And (formula_of_clause a) \<phi>))"
+    by simp
+
+  have "predicates_of_formula (fold And (map formula_of_clause (a # Cs)) \<phi>)
+    = (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C)) \<union>
+      predicates_of_formula (And (formula_of_clause a) \<phi>)"
+    unfolding clause_list_simp
+    using Cons.IH
+    by simp
+  also have "... = (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C)) \<union>
+      predicates_of_formula (formula_of_clause a) \<union>
+      predicates_of_formula  \<phi>"
+    by auto
+  also have "... = (\<Union>C\<in>set (a # Cs). 
+      predicates_of_formula (formula_of_clause C)) \<union> predicates_of_formula \<phi>"
+    by auto
+  finally show ?case .
+qed
+
+lemma predicates_of_formula_of_clause_list:
+  "predicates_of_formula (formula_of_clause_list Cs) =
+    (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C))"
+proof (induction Cs)
+  case Nil
+  show ?case
+    unfolding formula_of_clause_list_def formula_of_clause_def
+    by simp
+next
+  case (Cons a Cs)
+  have "predicates_of_formula (formula_of_clause_list (a # Cs))
+    = predicates_of_formula (fold And (map formula_of_clause Cs) (And (formula_of_clause a) T))"
+    unfolding formula_of_clause_list_eq_fold_And
+    by simp
+  also have "... = (\<Union>C\<in>set (a # Cs). predicates_of_formula (formula_of_clause C))"
+    unfolding predicates_of_formula_fold_And_map_formula_of_clause
+    by auto
+  finally show ?case .
 qed
 
 theorem tseitin_spec:
@@ -444,7 +774,7 @@ next
   show ?case
   proof (intro exI conjI ballI)
     show "\<And>x. x \<in> predicates_of_formula (formula.Not (Pred p ts\<^sub>p)) \<Longrightarrow> pI' x = pI x"
-      unfolding pI'_def fun_eq_iff
+      unfolding pI'_def
       using NegPred.prems(1,2) \<open>v = fresh \<V>\<close> fresh_spec 
       by auto
   next
@@ -538,6 +868,54 @@ next
       else (if x \<in> \<V>\<^sub>2 then pI2 x ds 
       else pI x ds)))"
 
+  have "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+    using tseitin_generated_var[OF _ te_\<phi>1]
+    by (simp add: Connective.hyps(1))
+
+  have "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+    using tseitin_generated_var[OF _ te_\<phi>2]
+    by (simp add: Connective.hyps(2))
+
+  have "\<V> \<inter> \<V>\<^sub>1 = {}"
+    using tseitin_fresh_vars[OF fresh_spec \<open>is_nnf \<phi>\<^sub>1\<close> \<open>finite \<V>\<close> te_\<phi>1]
+    by simp
+
+  have "finite (\<V> \<union> \<V>\<^sub>1)"
+  proof -
+    have "finite \<V>\<^sub>1"
+      using tseitin_finite_var_set[OF \<open>is_nnf \<phi>\<^sub>1\<close> te_\<phi>1]
+      by simp
+    show ?thesis
+      using \<open>finite \<V>\<close> \<open>finite \<V>\<^sub>1\<close>
+      by simp
+  qed
+
+  have "(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}"
+    using tseitin_fresh_vars[OF fresh_spec \<open>is_nnf \<phi>\<^sub>2\<close> \<open>finite (\<V> \<union> \<V>\<^sub>1)\<close> te_\<phi>2]
+    by simp
+
+  have "finite (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+  proof -
+    have "finite \<V>\<^sub>2"
+      using tseitin_finite_var_set[OF \<open>is_nnf \<phi>\<^sub>2\<close> te_\<phi>2]
+      by simp
+    show ?thesis
+      using \<open>finite (\<V> \<union> \<V>\<^sub>1)\<close> \<open>finite \<V>\<^sub>2\<close>
+      by simp
+  qed
+
+  have "v \<in> \<V>'" and "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    unfolding atomize_conj
+  proof (rule conjI)
+    show "v \<in> \<V>'"
+      by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
+  next
+    show "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+      unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+      using fresh_spec[OF \<open>finite (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>]
+      by simp
+  qed
+
   show ?case
   proof (intro exI conjI ballI)
     fix x
@@ -558,13 +936,14 @@ next
       using \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> \<open>x \<in> \<V>\<close> x_ni_\<V>'
       by auto
     show "pI' x = pI x"
-      unfolding pI'_def fun_eq_iff
+      unfolding pI'_def
       using x_ne_v x_ni_\<V>1 x_ni_\<V>2
       by auto 
   next
     show "eval_formula (formula_of_clause_list \<C>) vI fI pI'"
       unfolding \<open>\<C> = \<C>\<^sub>0 @ \<C>\<^sub>1 @ \<C>\<^sub>2\<close> eval_formula_formula_of_clause_list_append_iff
     proof(intro conjI)
+
       have simp1: "formula_of_clause_list \<C>\<^sub>0 = 
         And (Or (Not (Pred v\<^sub>2 ts\<^sub>2)) (Or (Not (Pred v\<^sub>1 ts\<^sub>1)) (Or (Pred v []) F)))
             (And (Or (Pred v\<^sub>2 ts\<^sub>2) (Or (Not (Pred v [])) F))
@@ -580,34 +959,6 @@ next
         unfolding simp1
         by simp
 
-      have "v \<in> \<V>'" and v_not_in: "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
-        unfolding atomize_conj
-      proof (rule conjI)
-        show "v \<in> \<V>'"
-          by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
-      next 
-        have "v \<notin> \<V> \<and> v \<notin> \<V>\<^sub>1 \<and> v \<notin> \<V>\<^sub>2"
-          by (metis Connective.hyps(1,2)
-              Connective.prems(1) Un_iff
-              \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> finite_Un
-              fresh_spec te_\<phi>1 te_\<phi>2
-              tseitin_finite_var_set)
-        then show "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
-          by simp
-      qed
-(*
-      have "\<V>\<^sub>1 \<noteq> {} \<or> \<V>\<^sub>1 = {}"
-        by simp
-*)
-      have "v\<^sub>1 \<in> \<V>\<^sub>1" and "v\<^sub>1 \<notin> \<V>" and "v\<^sub>2 \<in> \<V>\<^sub>2" and "v\<^sub>2 \<notin> (\<V> \<union> \<V>\<^sub>1)"
-        unfolding atomize_conj
-        by (metis Connective.hyps(1,2)
-            Connective.prems(1) disjoint_iff
-            finite_UnI fresh_spec te_\<phi>1 te_\<phi>2
-            tseitin_finite_var_set
-            tseitin_fresh_var_in_fresh_var_set
-            tseitin_fresh_vars)
-
       have posv: "eval_formula (Pred v []) vI fI pI'
         = (pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<and> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
         unfolding pI'_def
@@ -617,179 +968,250 @@ next
         using posv
         by simp
 
-      have posv1: "eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI' 
-        = pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1)"
+      have posv1: "v\<^sub>1 \<in> \<V>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI' = pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1))"
         unfolding eval_formula.simps pI'_def
-        using \<open>v\<^sub>1 \<in> \<V>\<^sub>1\<close> v_not_in
+        using \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
         by auto
-      have negv1: "eval_formula (Not (Pred v\<^sub>1 ts\<^sub>1)) vI fI pI'
-        = (\<not> pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1))"
+      have negv1: "v\<^sub>1 \<in> \<V>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Not (Pred v\<^sub>1 ts\<^sub>1)) vI fI pI' = (\<not> pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1)))" 
         using posv1 
         by auto
 
-      have posv2: "eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI'
-        = pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2)"
-        unfolding eval_formula.simps pI'_def
-        using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v\<^sub>2 \<notin> \<V> \<union> \<V>\<^sub>1\<close> v_not_in
-        by auto
-      have negv2: "eval_formula (Not (Pred v\<^sub>2 ts\<^sub>2)) vI fI pI'
-        = (\<not> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
+      have posv2: "v\<^sub>2 \<in> \<V>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI' = pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
+      proof -
+        assume "v\<^sub>2 \<in> \<V>\<^sub>2"
+        have "v\<^sub>2 \<notin> \<V>" and "v\<^sub>2 \<notin> \<V>\<^sub>1"
+          unfolding atomize_conj
+          using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close> 
+          by auto
+        have "v\<^sub>2 \<noteq> v"
+          using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v\<^sub>2 \<noteq> v\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>1\<close>)
+      qed
+      have negv2: "v\<^sub>2 \<in> \<V>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Not (Pred v\<^sub>2 ts\<^sub>2)) vI fI pI' = (\<not> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2)))"
         using posv2 
         by auto
 
-      show "eval_formula (formula_of_clause_list \<C>\<^sub>0) vI fI pI'"
-        using simp2 posv negv posv1 negv1 posv2 negv2
-        by simp
+      have posv1_pred: "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI' = pI v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1))"
+      proof -
+        assume assumption: "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1"
+        have pred_\<phi>1_in_\<V>: "predicates_of_formula \<phi>\<^sub>1 \<subseteq> \<V>"
+          using Connective.prems(2) 
+          by auto
+        have "v\<^sub>1 \<in> \<V>"
+          using assumption pred_\<phi>1_in_\<V>
+          by auto
+        have "v\<^sub>1 \<notin> \<V>\<^sub>1"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
+          by auto
+        have "v\<^sub>1 \<notin> \<V>\<^sub>2"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+          by auto
+        have "v\<^sub>1 \<noteq> v"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>1 \<noteq> v\<close> \<open>v\<^sub>1 \<notin> \<V>\<^sub>1\<close> \<open>v\<^sub>1 \<notin> \<V>\<^sub>2\<close>)
+      qed
+      have negv1_pred: "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Not (Pred v\<^sub>1 ts\<^sub>1)) vI fI pI' = (\<not> pI v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1)))"
+        using posv1_pred 
+        by auto
+
+      have posv2_pred: "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI' = pI v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
+      proof -
+        assume assumption: "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2"
+        have pred_\<phi>2_in_\<V>: "predicates_of_formula \<phi>\<^sub>2 \<subseteq> \<V>"
+          using Connective.prems(2)
+          by auto
+        have "v\<^sub>2 \<in> \<V>"
+          using assumption pred_\<phi>2_in_\<V>
+          by auto
+        have "v\<^sub>2 \<notin> \<V>\<^sub>1"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
+          by auto
+        have "v\<^sub>2 \<notin> \<V>\<^sub>2"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+          by auto
+        have "v\<^sub>2 \<noteq> v"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>2 \<noteq> v\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>1\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>2\<close>)
+      qed
+      have negv2_pred: "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Not (Pred v\<^sub>2 ts\<^sub>2)) vI fI pI' = (\<not> pI v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2)))"
+        using posv2_pred 
+        by auto
+
+      consider
+        (A) "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<and> (v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2)" |
+        (B) "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<and> (v\<^sub>2 \<in> \<V>\<^sub>2)" |
+        (C) "v\<^sub>1 \<in> \<V>\<^sub>1 \<and> (v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2)" |
+        (D) "v\<^sub>1 \<in> \<V>\<^sub>1 \<and> (v\<^sub>2 \<in> \<V>\<^sub>2)"
+        using
+          \<open>v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1\<close>
+          \<open>v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2\<close>
+        by blast
+
+      then show "eval_formula (formula_of_clause_list \<C>\<^sub>0) vI fI pI'"
+      proof cases
+        case A
+        then show ?thesis
+          unfolding simp2
+          using posv posv1_pred posv2_pred pI1_extends_pI pI2_extends_pI
+          by simp
+      next
+        case B
+        then show ?thesis
+          unfolding simp2
+          using posv negv2 posv1_pred pI1_extends_pI
+          by simp
+      next
+        case C
+        then show ?thesis 
+          unfolding simp2
+          using posv negv1 posv2_pred pI2_extends_pI
+          by simp
+      next
+        case D
+        then show ?thesis
+          unfolding simp2
+          using posv posv1 posv2
+          by simp
+      qed
     next
       show "eval_formula (formula_of_clause_list \<C>\<^sub>1) vI fI pI'"
-      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1])
+      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1, of _ pI1])
         fix x
         assume assumption: "x \<in> predicates_of_formula (formula_of_clause_list \<C>\<^sub>1)"
-(*
-        have "\<C>\<^sub>1 \<noteq> [] \<or> \<C>\<^sub>1 = []"
+
+        have ins_v: "insert v\<^sub>1 (predicates_of_formula (formula_of_clause_list \<C>\<^sub>1))
+          = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+          unfolding predicates_of_formula_of_clause_list
+          unfolding predicates_of_formula_of_clause
+          using tseitin_generated_vars[OF \<open>is_nnf \<phi>\<^sub>1\<close> te_\<phi>1]
           by simp
-*)
-        have \<C>1_preds: "predicates_of_formula (formula_of_clause_list \<C>\<^sub>1)
-          = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1 \<union> {v\<^sub>1}"
-          using predicates_of_clause_list[OF _ te_\<phi>1]
-          by (simp add: Connective.hyps(1))
 
-        have "\<V>\<^sub>1 \<union> {v\<^sub>1} = \<V>\<^sub>1"
-          using Connective.hyps(1) te_\<phi>1 tseitin_fresh_var_in_fresh_var_set
-          by fastforce
-
-        have "x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
-          using \<C>1_preds assumption \<open>\<V>\<^sub>1 \<union> {v\<^sub>1} = \<V>\<^sub>1\<close>
+        have x_in: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+          using assumption ins_v
           by auto
 
-        have x_in_pred_of_\<phi>1: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> pI1 x = pI' x" 
+        have x_in_preds: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> pI1 x = pI' x" 
         proof -
-          assume assumption: "x \<in> predicates_of_formula \<phi>\<^sub>1"
-
+          assume assm: "x \<in> predicates_of_formula \<phi>\<^sub>1"
           have "x \<in> \<V>"
-            using Connective.prems(2) assumption
-            by fastforce
-          have "v \<notin> \<V>"
-            using \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> fresh_spec
-            by (metis Connective.hyps(1,2)
-                Connective.prems(1) Un_iff finite_Un
-                te_\<phi>1 te_\<phi>2 tseitin_finite_var_set)
-          have "x \<noteq> v"
-            using \<open>v \<notin> \<V>\<close> \<open>x \<in> \<V>\<close> 
-            by auto
-          have "\<V> \<inter> \<V>\<^sub>2 = {}"
-            using tseitin_fresh_vars[OF _ _ _ te_\<phi>2]
-            by (metis Connective.hyps(2)
-                Connective.prems(1) Int_assoc Un_Int_eq(4)
-                Un_commute \<C>1_preds fresh_spec
-                inf_compl_bot_right infinite_Un
-                predicates_of_formula_finite)
+          proof -
+            have "predicates_of_formula \<phi>\<^sub>1 \<subseteq> predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2)"
+              by simp
+            also have subset: "... \<subseteq> \<V>"
+              using \<open>predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2) \<subseteq> \<V>\<close>
+              by simp
+            show ?thesis
+              using subset assm
+              by auto
+          qed
           have "x \<notin> \<V>\<^sub>2"
-            using \<open>\<V> \<inter> \<V>\<^sub>2 = {}\<close> \<open>x \<in> \<V>\<close>
+            using \<open>x \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
             by auto
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+            by auto
           show ?thesis
             unfolding pI'_def
-            by (simp add: \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>2\<close> assumption pI1_extends_pI)
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>2\<close> assm pI1_extends_pI 
+            by simp
         qed
 
         have x_in_\<V>1: "x \<in> \<V>\<^sub>1 \<Longrightarrow> pI1 x = pI' x"
         proof -
           assume "x \<in> \<V>\<^sub>1"
-
-          have "v \<notin> \<V>\<^sub>1"
-            unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
-            by (metis And Connective.hyps(1,2)
-                Connective.prems(1,3) UnI1 UnI2
-                \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> finite_insert
-                fresh_spec infinite_Un tseitin_finite_var_set)
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<^sub>1\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+            by auto
           show ?thesis
             unfolding pI'_def
-            using \<open>v \<notin> \<V>\<^sub>1\<close> \<open>x \<in> \<V>\<^sub>1\<close> 
-            by auto
+            using \<open>x \<noteq> v\<close> \<open>x \<in> \<V>\<^sub>1\<close>
+            by simp
         qed
 
         show "pI1 x = pI' x"
-          using \<open>x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1\<close> x_in_\<V>1 x_in_pred_of_\<phi>1 
-          by auto
+          using x_in x_in_preds x_in_\<V>1
+          by blast
       next
         show "eval_formula (formula_of_clause_list \<C>\<^sub>1) vI fI pI1"
           by (simp add: pI1_model)
       qed
     next
       show "eval_formula (formula_of_clause_list \<C>\<^sub>2) vI fI pI'"
-      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1])
+      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1, of _ pI2])
         fix x
         assume assumption: "x \<in> predicates_of_formula (formula_of_clause_list \<C>\<^sub>2)"
 
-        have \<C>2_preds: "predicates_of_formula (formula_of_clause_list \<C>\<^sub>2)
-          = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2 \<union> {v\<^sub>2}"
-          using predicates_of_clause_list[OF _ te_\<phi>2]
-          by (simp add: Connective.hyps(2))
+        have ins_v: "insert v\<^sub>2 (predicates_of_formula (formula_of_clause_list \<C>\<^sub>2))
+          = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+          unfolding predicates_of_formula_of_clause_list
+          unfolding predicates_of_formula_of_clause
+          using tseitin_generated_vars[OF \<open>is_nnf \<phi>\<^sub>2\<close> te_\<phi>2]
+          by simp
 
-        have "\<V>\<^sub>2 \<union> {v\<^sub>2} = \<V>\<^sub>2"
-          using Connective.hyps(2) te_\<phi>2 tseitin_fresh_var_in_fresh_var_set
-          by fastforce
-
-        have "x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
-          using \<C>2_preds assumption \<open>\<V>\<^sub>2 \<union> {v\<^sub>2} = \<V>\<^sub>2\<close>
+        have x_in: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+          using assumption ins_v
           by auto
 
-        have x_in_pred_of_\<phi>2: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> pI2 x = pI' x" 
+        have x_in_preds: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> pI2 x = pI' x" 
         proof -
-          assume assumption: "x \<in> predicates_of_formula \<phi>\<^sub>2"
-
+          assume assm: "x \<in> predicates_of_formula \<phi>\<^sub>2"
           have "x \<in> \<V>"
-            using Connective.prems(2) assumption
-            by fastforce
-          have "v \<notin> \<V>"
-            using \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> fresh_spec
-            by (metis Connective.hyps(1,2)
-                Connective.prems(1) Un_iff finite_Un
-                te_\<phi>1 te_\<phi>2 tseitin_finite_var_set)
-          have "x \<noteq> v"
-            using \<open>v \<notin> \<V>\<close> \<open>x \<in> \<V>\<close> 
-            by auto
-          have "\<V> \<inter> \<V>\<^sub>1 = {}"
-            using tseitin_fresh_vars[OF _ _ _ te_\<phi>1]
-            by (simp add: Connective.hyps(1)
-                Connective.prems(1) fresh_spec)
+          proof -
+            have "predicates_of_formula \<phi>\<^sub>2 \<subseteq> predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2)"
+              by simp
+            also have subset: "... \<subseteq> \<V>"
+              using \<open>predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2) \<subseteq> \<V>\<close>
+              by simp
+            show ?thesis
+              using subset assm
+              by auto
+          qed
           have "x \<notin> \<V>\<^sub>1"
-            using \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close> \<open>x \<in> \<V>\<close>
+            using \<open>x \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
             by auto
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+            by auto
           show ?thesis
             unfolding pI'_def
-            by (simp add: \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> assumption pI2_extends_pI)
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> assm pI2_extends_pI
+            by simp
         qed
 
         have x_in_\<V>2: "x \<in> \<V>\<^sub>2 \<Longrightarrow> pI2 x = pI' x"
         proof -
           assume "x \<in> \<V>\<^sub>2"
-
           have "x \<notin> \<V>\<^sub>1"
-            using fresh_spec
-            by (meson PosPred all_not_in_conv
-                tseitin.simps(1)
-                tseitin_fresh_var_in_fresh_var_set)
-
-          have "v \<notin> \<V>\<^sub>2"
-            unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
-            by (metis Connective.hyps(1)
-                Connective.prems(1) UnCI \<C>2_preds
-                finite_Un fresh_spec
-                predicates_of_formula_finite te_\<phi>1
-                tseitin_finite_var_set)
-
+            using \<open>x \<in> \<V>\<^sub>2\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+            by auto
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<^sub>2\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+            by auto
           show ?thesis
             unfolding pI'_def
-            using \<open>v \<notin> \<V>\<^sub>2\<close> \<open>x \<in> \<V>\<^sub>2\<close> \<open>x \<notin> \<V>\<^sub>1\<close>
-            by auto
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> \<open>x \<in> \<V>\<^sub>2\<close>
+            by simp
         qed
 
         show "pI2 x = pI' x"
-          using \<open>x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2\<close> x_in_\<V>2 x_in_pred_of_\<phi>2 
+          using x_in x_in_preds x_in_\<V>2
           by auto
       next
         show "eval_formula (formula_of_clause_list \<C>\<^sub>2) vI fI pI2"
@@ -850,6 +1272,54 @@ next
       else (if x \<in> \<V>\<^sub>2 then pI2 x ds 
       else pI x ds)))"
 
+  have "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+    using tseitin_generated_var[OF _ te_\<phi>1]
+    by (simp add: Connective.hyps(1))
+
+  have "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+    using tseitin_generated_var[OF _ te_\<phi>2]
+    by (simp add: Connective.hyps(2))
+
+  have "\<V> \<inter> \<V>\<^sub>1 = {}"
+    using tseitin_fresh_vars[OF fresh_spec \<open>is_nnf \<phi>\<^sub>1\<close> \<open>finite \<V>\<close> te_\<phi>1]
+    by simp
+
+  have "finite (\<V> \<union> \<V>\<^sub>1)"
+  proof -
+    have "finite \<V>\<^sub>1"
+      using tseitin_finite_var_set[OF \<open>is_nnf \<phi>\<^sub>1\<close> te_\<phi>1]
+      by simp
+    show ?thesis
+      using \<open>finite \<V>\<close> \<open>finite \<V>\<^sub>1\<close>
+      by simp
+  qed
+
+  have "(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}"
+    using tseitin_fresh_vars[OF fresh_spec \<open>is_nnf \<phi>\<^sub>2\<close> \<open>finite (\<V> \<union> \<V>\<^sub>1)\<close> te_\<phi>2]
+    by simp
+
+  have "finite (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+  proof -
+    have "finite \<V>\<^sub>2"
+      using tseitin_finite_var_set[OF \<open>is_nnf \<phi>\<^sub>2\<close> te_\<phi>2]
+      by simp
+    show ?thesis
+      using \<open>finite (\<V> \<union> \<V>\<^sub>1)\<close> \<open>finite \<V>\<^sub>2\<close>
+      by simp
+  qed
+
+  have "v \<in> \<V>'" and "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    unfolding atomize_conj
+  proof (rule conjI)
+    show "v \<in> \<V>'"
+      by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
+  next
+    show "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+      unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+      using fresh_spec[OF \<open>finite (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>]
+      by simp
+  qed
+
   show ?case
   proof (intro exI conjI ballI)
     fix x
@@ -870,7 +1340,7 @@ next
       using \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> \<open>x \<in> \<V>\<close> x_ni_\<V>'
       by auto
     show "pI' x = pI x"
-      unfolding pI'_def fun_eq_iff
+      unfolding pI'_def
       using x_ne_v x_ni_\<V>1 x_ni_\<V>2
       by auto  
   next
@@ -892,199 +1362,239 @@ next
         unfolding simp1
         by simp
 
-      have "v \<in> \<V>'" and v_not_in: "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
-        unfolding atomize_conj
-      proof (rule conjI)
-        show "v \<in> \<V>'"
-          by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
-      next 
-        have "v \<notin> \<V> \<and> v \<notin> \<V>\<^sub>1 \<and> v \<notin> \<V>\<^sub>2"
-          by (metis Connective.hyps(1,2)
-              Connective.prems(1) Un_iff
-              \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> finite_Un
-              fresh_spec te_\<phi>1 te_\<phi>2
-              tseitin_finite_var_set)
-        then show "v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)"
-          by simp
-      qed
-
-      have "v\<^sub>1 \<in> \<V>\<^sub>1" and "v\<^sub>1 \<notin> \<V>" and "v\<^sub>2 \<in> \<V>\<^sub>2" and "v\<^sub>2 \<notin> (\<V> \<union> \<V>\<^sub>1)"
-        unfolding atomize_conj
-        by (metis Connective.hyps(1,2)
-            Connective.prems(1) disjoint_iff
-            finite_UnI fresh_spec te_\<phi>1 te_\<phi>2
-            tseitin_finite_var_set
-            tseitin_fresh_var_in_fresh_var_set
-            tseitin_fresh_vars)
-
       have posv: "eval_formula (Pred v []) vI fI pI'
         = (pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<or> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
         unfolding pI'_def
         by simp
 
-      have posv1: "eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI'
-        = pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1)"
+      have posv1: "v\<^sub>1 \<in> \<V>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI' = pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1))"
         unfolding eval_formula.simps pI'_def
-        using \<open>v\<^sub>1 \<in> \<V>\<^sub>1\<close> v_not_in
+        using \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
         by auto
 
-      have posv2: "eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI'
-        = pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2)"
-        unfolding eval_formula.simps pI'_def
-        using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v\<^sub>2 \<notin> \<V> \<union> \<V>\<^sub>1\<close> v_not_in
-        by auto
+      have posv2: "v\<^sub>2 \<in> \<V>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI' = pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
+      proof -
+        assume "v\<^sub>2 \<in> \<V>\<^sub>2"
+        have "v\<^sub>2 \<notin> \<V>" and "v\<^sub>2 \<notin> \<V>\<^sub>1"
+          unfolding atomize_conj
+          using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close> 
+          by auto
+        have "v\<^sub>2 \<noteq> v"
+          using \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>2 \<in> \<V>\<^sub>2\<close> \<open>v\<^sub>2 \<noteq> v\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>1\<close>)
+      qed
 
-      show "eval_formula (formula_of_clause_list \<C>\<^sub>0) vI fI pI'"
-        using posv posv1 posv2 simp2
-        by auto
+      have posv1_pred: "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>1 ts\<^sub>1) vI fI pI' = pI v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1))"
+      proof -
+        assume assumption: "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1"
+        have pred_\<phi>1_in_\<V>: "predicates_of_formula \<phi>\<^sub>1 \<subseteq> \<V>"
+          using Connective.prems(2) 
+          by auto
+        have "v\<^sub>1 \<in> \<V>"
+          using assumption pred_\<phi>1_in_\<V>
+          by auto
+        have "v\<^sub>1 \<notin> \<V>\<^sub>1"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
+          by auto
+        have "v\<^sub>1 \<notin> \<V>\<^sub>2"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+          by auto
+        have "v\<^sub>1 \<noteq> v"
+          using \<open>v\<^sub>1 \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>1 \<noteq> v\<close> \<open>v\<^sub>1 \<notin> \<V>\<^sub>1\<close> \<open>v\<^sub>1 \<notin> \<V>\<^sub>2\<close>)
+      qed
+
+      have posv2_pred: "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> 
+        (eval_formula (Pred v\<^sub>2 ts\<^sub>2) vI fI pI' = pI v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2))"
+      proof -
+        assume assumption: "v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2"
+        have pred_\<phi>2_in_\<V>: "predicates_of_formula \<phi>\<^sub>2 \<subseteq> \<V>"
+          using Connective.prems(2)
+          by auto
+        have "v\<^sub>2 \<in> \<V>"
+          using assumption pred_\<phi>2_in_\<V>
+          by auto
+        have "v\<^sub>2 \<notin> \<V>\<^sub>1"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
+          by auto
+        have "v\<^sub>2 \<notin> \<V>\<^sub>2"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+          by auto
+        have "v\<^sub>2 \<noteq> v"
+          using \<open>v\<^sub>2 \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+          by auto
+        show ?thesis
+          unfolding eval_formula.simps pI'_def
+          by (simp add: \<open>v\<^sub>2 \<noteq> v\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>1\<close> \<open>v\<^sub>2 \<notin> \<V>\<^sub>2\<close>)
+      qed
+
+      consider
+        (A) "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<and> (v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2)" |
+        (B) "v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<and> (v\<^sub>2 \<in> \<V>\<^sub>2)" |
+        (C) "v\<^sub>1 \<in> \<V>\<^sub>1 \<and> (v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2)" |
+        (D) "v\<^sub>1 \<in> \<V>\<^sub>1 \<and> (v\<^sub>2 \<in> \<V>\<^sub>2)"
+        using
+          \<open>v\<^sub>1 \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1\<close>
+          \<open>v\<^sub>2 \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2\<close>
+        by blast
+
+      then show "eval_formula (formula_of_clause_list \<C>\<^sub>0) vI fI pI'"
+      proof cases
+        case A
+        then show ?thesis
+          unfolding simp2
+          using posv posv1_pred posv2_pred pI1_extends_pI pI2_extends_pI
+          by auto
+      next
+        case B
+        then show ?thesis
+          unfolding simp2
+          using posv posv2 posv1_pred pI1_extends_pI
+          by auto
+      next
+        case C
+        then show ?thesis 
+          unfolding simp2
+          using posv posv1 posv2_pred pI2_extends_pI
+          by auto
+      next
+        case D
+        then show ?thesis
+          unfolding simp2
+          using posv posv1 posv2
+          by auto
+      qed
     next
       show "eval_formula (formula_of_clause_list \<C>\<^sub>1) vI fI pI'"
-      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1])
+      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1, of _ pI1])
         fix x
         assume assumption: "x \<in> predicates_of_formula (formula_of_clause_list \<C>\<^sub>1)"
 
-        have \<C>1_preds: "predicates_of_formula (formula_of_clause_list \<C>\<^sub>1)
-          = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1 \<union> {v\<^sub>1}"
-          using predicates_of_clause_list[OF _ te_\<phi>1]
-          by (simp add: Connective.hyps(1))
+        have ins_v: "insert v\<^sub>1 (predicates_of_formula (formula_of_clause_list \<C>\<^sub>1))
+          = predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+          unfolding predicates_of_formula_of_clause_list
+          unfolding predicates_of_formula_of_clause
+          using tseitin_generated_vars[OF \<open>is_nnf \<phi>\<^sub>1\<close> te_\<phi>1]
+          by simp
 
-        have "\<V>\<^sub>1 \<union> {v\<^sub>1} = \<V>\<^sub>1"
-          using Connective.hyps(1) te_\<phi>1 tseitin_fresh_var_in_fresh_var_set
-          by fastforce
-
-        have "x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
-          using \<C>1_preds assumption \<open>\<V>\<^sub>1 \<union> {v\<^sub>1} = \<V>\<^sub>1\<close>
+        have x_in: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1"
+          using assumption ins_v
           by auto
 
-        have x_in_pred_of_\<phi>1: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> pI1 x = pI' x" 
+        have x_in_preds: "x \<in> predicates_of_formula \<phi>\<^sub>1 \<Longrightarrow> pI1 x = pI' x" 
         proof -
-          assume assumption: "x \<in> predicates_of_formula \<phi>\<^sub>1"
-
+          assume assm: "x \<in> predicates_of_formula \<phi>\<^sub>1"
           have "x \<in> \<V>"
-            using Connective.prems(2) assumption
-            by fastforce
-          have "v \<notin> \<V>"
-            using \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> fresh_spec
-            by (metis Connective.hyps(1,2)
-                Connective.prems(1) Un_iff finite_Un
-                te_\<phi>1 te_\<phi>2 tseitin_finite_var_set)
-          have "x \<noteq> v"
-            using \<open>v \<notin> \<V>\<close> \<open>x \<in> \<V>\<close> 
-            by auto
-          have "\<V> \<inter> \<V>\<^sub>2 = {}"
-            using tseitin_fresh_vars[OF _ _ _ te_\<phi>2]
-            by (metis Connective.hyps(2)
-                Connective.prems(1) Int_assoc Un_Int_eq(4)
-                Un_commute \<C>1_preds fresh_spec
-                inf_compl_bot_right infinite_Un
-                predicates_of_formula_finite)
+          proof -
+            have "predicates_of_formula \<phi>\<^sub>1 \<subseteq> predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2)"
+              by simp
+            also have subset: "... \<subseteq> \<V>"
+              using \<open>predicates_of_formula (Or \<phi>\<^sub>1 \<phi>\<^sub>2) \<subseteq> \<V>\<close>
+              by simp
+            show ?thesis
+              using subset assm
+              by auto
+          qed
           have "x \<notin> \<V>\<^sub>2"
-            using \<open>\<V> \<inter> \<V>\<^sub>2 = {}\<close> \<open>x \<in> \<V>\<close>
+            using \<open>x \<in> \<V>\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
             by auto
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+            by auto
           show ?thesis
             unfolding pI'_def
-            by (simp add: \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>2\<close> assumption pI1_extends_pI)
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>2\<close> assm pI1_extends_pI 
+            by simp
         qed
 
         have x_in_\<V>1: "x \<in> \<V>\<^sub>1 \<Longrightarrow> pI1 x = pI' x"
         proof -
           assume "x \<in> \<V>\<^sub>1"
-
-          have "v \<notin> \<V>\<^sub>1"
-            unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
-            by (metis Connective.hyps(2)
-                Connective.prems(1) UnCI \<C>1_preds
-                finite_Un fresh_spec
-                predicates_of_formula_finite te_\<phi>2
-                tseitin_finite_var_set)
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<^sub>1\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+            by auto
           show ?thesis
             unfolding pI'_def
-            using \<open>v \<notin> \<V>\<^sub>1\<close> \<open>x \<in> \<V>\<^sub>1\<close> 
-            by auto
+            using \<open>x \<noteq> v\<close> \<open>x \<in> \<V>\<^sub>1\<close>
+            by simp
         qed
 
         show "pI1 x = pI' x"
-          using \<open>x \<in> predicates_of_formula \<phi>\<^sub>1 \<union> \<V>\<^sub>1\<close> x_in_\<V>1 x_in_pred_of_\<phi>1 
-          by auto
+          using x_in x_in_preds x_in_\<V>1
+          by blast
       next
         show "eval_formula (formula_of_clause_list \<C>\<^sub>1) vI fI pI1"
           by (simp add: pI1_model)
       qed
     next
       show "eval_formula (formula_of_clause_list \<C>\<^sub>2) vI fI pI'"
-      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1])
+      proof (rule eval_formula_cong_wrt_predicate_evaluation[THEN iffD1, of _ pI2])
         fix x
         assume assumption: "x \<in> predicates_of_formula (formula_of_clause_list \<C>\<^sub>2)"
 
-        have \<C>2_preds: "predicates_of_formula (formula_of_clause_list \<C>\<^sub>2)
-          = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2 \<union> {v\<^sub>2}"
-          using predicates_of_clause_list[OF _ te_\<phi>2]
-          by (simp add: Connective.hyps(2))
+        have ins_v: "insert v\<^sub>2 (predicates_of_formula (formula_of_clause_list \<C>\<^sub>2))
+          = predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+          unfolding predicates_of_formula_of_clause_list
+          unfolding predicates_of_formula_of_clause
+          using tseitin_generated_vars[OF \<open>is_nnf \<phi>\<^sub>2\<close> te_\<phi>2]
+          by simp
 
-        have "\<V>\<^sub>2 \<union> {v\<^sub>2} = \<V>\<^sub>2"
-          using Connective.hyps(2) te_\<phi>2 tseitin_fresh_var_in_fresh_var_set
-          by fastforce
-
-        have "x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
-          using \<C>2_preds assumption \<open>\<V>\<^sub>2 \<union> {v\<^sub>2} = \<V>\<^sub>2\<close>
+        have x_in: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2"
+          using assumption ins_v
           by auto
 
-        have x_in_pred_of_\<phi>2: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> pI2 x = pI' x" 
+        have x_in_preds: "x \<in> predicates_of_formula \<phi>\<^sub>2 \<Longrightarrow> pI2 x = pI' x" 
         proof -
-          assume assumption: "x \<in> predicates_of_formula \<phi>\<^sub>2"
-
+          assume assm: "x \<in> predicates_of_formula \<phi>\<^sub>2"
           have "x \<in> \<V>"
-            using Connective.prems(2) assumption
-            by fastforce
-          have "v \<notin> \<V>"
-            using \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> fresh_spec
-            by (metis Connective.hyps(1,2)
-                Connective.prems(1) Un_iff finite_Un
-                te_\<phi>1 te_\<phi>2 tseitin_finite_var_set)
-          have "x \<noteq> v"
-            using \<open>v \<notin> \<V>\<close> \<open>x \<in> \<V>\<close> 
-            by auto
-          have "\<V> \<inter> \<V>\<^sub>1 = {}"
-            using tseitin_fresh_vars[OF _ _ _ te_\<phi>1]
-            by (simp add: Connective.hyps(1)
-                Connective.prems(1) fresh_spec)
+          proof -
+            have "predicates_of_formula \<phi>\<^sub>2 \<subseteq> predicates_of_formula (And \<phi>\<^sub>1 \<phi>\<^sub>2)"
+              by simp
+            also have subset: "... \<subseteq> \<V>"
+              using \<open>predicates_of_formula (Or \<phi>\<^sub>1 \<phi>\<^sub>2) \<subseteq> \<V>\<close>
+              by simp
+            show ?thesis
+              using subset assm
+              by auto
+          qed
           have "x \<notin> \<V>\<^sub>1"
-            using \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close> \<open>x \<in> \<V>\<close>
+            using \<open>x \<in> \<V>\<close> \<open>\<V> \<inter> \<V>\<^sub>1 = {}\<close>
             by auto
-
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close> 
+            by auto
           show ?thesis
             unfolding pI'_def
-            by (simp add: \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> assumption pI2_extends_pI)
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> assm pI2_extends_pI
+            by simp
         qed
 
         have x_in_\<V>2: "x \<in> \<V>\<^sub>2 \<Longrightarrow> pI2 x = pI' x"
         proof -
           assume "x \<in> \<V>\<^sub>2"
-
           have "x \<notin> \<V>\<^sub>1"
-            using fresh_spec
-            by (meson PosPred all_not_in_conv
-                tseitin.simps(1)
-                tseitin_fresh_var_in_fresh_var_set)
-
-          have "v \<notin> \<V>\<^sub>2"
-            unfolding \<open>v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
-            by (metis Connective.hyps(1)
-                Connective.prems(1) UnCI \<C>2_preds
-                finite_Un fresh_spec
-                predicates_of_formula_finite te_\<phi>1
-                tseitin_finite_var_set)
-
+            using \<open>x \<in> \<V>\<^sub>2\<close> \<open>(\<V> \<union> \<V>\<^sub>1) \<inter> \<V>\<^sub>2 = {}\<close>
+            by auto
+          have "x \<noteq> v"
+            using \<open>x \<in> \<V>\<^sub>2\<close> \<open>v \<notin> (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>
+            by auto
           show ?thesis
             unfolding pI'_def
-            using \<open>v \<notin> \<V>\<^sub>2\<close> \<open>x \<in> \<V>\<^sub>2\<close> \<open>x \<notin> \<V>\<^sub>1\<close>
-            by auto
+            using \<open>x \<noteq> v\<close> \<open>x \<notin> \<V>\<^sub>1\<close> \<open>x \<in> \<V>\<^sub>2\<close>
+            by simp
         qed
 
         show "pI2 x = pI' x"
-          using \<open>x \<in> predicates_of_formula \<phi>\<^sub>2 \<union> \<V>\<^sub>2\<close> x_in_\<V>2 x_in_pred_of_\<phi>2 
+          using x_in x_in_preds x_in_\<V>2
           by auto
       next
         show "eval_formula (formula_of_clause_list \<C>\<^sub>2) vI fI pI2"
@@ -1395,6 +1905,8 @@ proof (rule iffI)
   qed
 qed
 
+(*EXTRAS*)
+(*
 section \<open>Number of Introduced Fresh Variables\<close>
 
 primrec branches :: "('v, 'f, 'p) formula \<Rightarrow> nat" where
@@ -1424,72 +1936,90 @@ theorem tseitin_expansion_card_vars:
   shows "card (predicates_of_formula (tseitin_expansion fresh \<phi>)) =
     card (predicates_of_formula \<phi>) + branches \<phi>"
   sorry
+*)
 
 
-
+(*Proved but not used*)
 (**)
-
-(*
-lemma
-  fixes \<phi> :: "('v, 'f, 'p) formula"
+lemma tseitin_fresh_var_in_fresh_var_set:
   assumes "is_nnf \<phi>"
+  assumes "predicates_of_formula \<phi> \<subseteq> \<V>"
   assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
-  shows
-    tseitin_generated_var: "v \<in> predicates_of_formula \<phi> \<union> \<V>'" and
-    tseitin_generated_vars: "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula \<phi> \<union> \<V>'"
-  unfolding atomize_conj
-  sorry
-*)
+  shows "v \<in> (if \<V>' = {} then \<V> else \<V>')"
+  using assms
+proof (induction \<phi>  arbitrary: \<V> v ts \<C> \<V>' rule: is_nnf.induct)
+  case (PosPred p ts\<^sub>p)
 
-(*
-lemma formula_of_clause_eq_fold_Or:
-  "formula_of_clause C = fold Or (map formula_of_literal C) F"
-  by (metis (no_types, lifting) ext comp_apply
-      fold_map formula_of_clause_def)
-*)
+  have  "v = p" and
+        "ts = ts\<^sub>p" and
+        "\<C> = []" and
+        "\<V>' = {}"
+    unfolding atomize_conj
+    using PosPred.prems[simplified]
+    by simp
 
-(*
-lemma formula_of_clause_list_eq_fold_And:
-  "formula_of_clause_list Cs = fold And (map formula_of_clause Cs) T"
-  by (metis (no_types, lifting) ext comp_apply
-      fold_map formula_of_clause_list_def)
-*)
+  have "p \<in> \<V>"
+    using PosPred.prems(1) 
+    by auto
 
-(*
-lemma eval_formula_fold_And_iff:
-  "eval_formula (fold And xs \<phi>) vI fI pI \<longleftrightarrow>
-    eval_formula (fold And xs T) vI fI pI \<and> eval_formula \<phi> vI fI pI"
-  sorry
-*)
+  show ?case
+    by (simp add: \<open>\<V>' = {}\<close> \<open>p \<in> \<V>\<close> \<open>v = p\<close>)
+next
+  case (NegPred p ts\<^sub>p)
 
-(*
-lemma eval_formula_fold_And_append_iff:
-  "eval_formula (fold And (xs @ ys) \<phi>) vI fI pI \<longleftrightarrow>
-    eval_formula (fold And xs T) vI fI pI \<and>
-    eval_formula (fold And ys T) vI fI pI \<and>
-    eval_formula \<phi> vI fI pI"
-  sorry
-*)
+  have "v = fresh \<V>" and
+       "ts = []" and
+       "\<V>' = insert v {}"
+    unfolding atomize_conj
+    using NegPred.prems[simplified]
+    by (metis prod.inject)
 
-(*
-lemma predicates_of_formula_fold_Or_map_formula_of_literal:
-  "predicates_of_formula (fold Or (map formula_of_literal C) \<phi>) =
-  fst ` atom ` set C \<union> predicates_of_formula \<phi>"
-  sorry
+  show ?case
+    by (simp add: \<open>\<V>' = {v}\<close>)
+next
+  case (And \<phi>\<^sub>1 \<phi>\<^sub>2)
 
-lemma predicates_of_formula_of_clause:
-  "predicates_of_formula (formula_of_clause C) = fst ` atom ` set C"
-  sorry
+  obtain v\<^sub>1 ts\<^sub>1 \<C>\<^sub>1 \<V>\<^sub>1 where
+    te_\<phi>1: "tseitin fresh \<V> \<phi>\<^sub>1 = (v\<^sub>1, ts\<^sub>1, \<C>\<^sub>1, \<V>\<^sub>1)"
+    using prod_cases4 
+    by blast
 
-lemma predicates_of_formula_fold_And_map_formula_of_clause:
-  "predicates_of_formula (fold And (map formula_of_clause Cs) \<phi>) =
-  (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C)) \<union> predicates_of_formula \<phi>"
-  sorry
+  obtain v\<^sub>2 ts\<^sub>2 \<C>\<^sub>2 \<V>\<^sub>2 where
+    te_\<phi>2: "tseitin fresh (\<V> \<union> \<V>\<^sub>1) \<phi>\<^sub>2 = (v\<^sub>2, ts\<^sub>2, \<C>\<^sub>2, \<V>\<^sub>2)"
+    using prod_cases4 
+    by blast
 
-lemma predicates_of_formula_of_clause_list:
-  "predicates_of_formula (formula_of_clause_list Cs) =
-    (\<Union> C \<in> set Cs. predicates_of_formula (formula_of_clause C))"
-  sorry
-*)
+  have
+    "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
+    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    unfolding atomize_conj
+    using And.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
+    by (metis Pair_inject)
+
+  show ?case
+    by (simp add: \<V>'_def)
+next
+  case (Or \<phi>\<^sub>1 \<phi>\<^sub>2)
+
+  obtain v\<^sub>1 ts\<^sub>1 \<C>\<^sub>1 \<V>\<^sub>1 where
+    te_\<phi>1: "tseitin fresh \<V> \<phi>\<^sub>1 = (v\<^sub>1, ts\<^sub>1, \<C>\<^sub>1, \<V>\<^sub>1)"
+    using prod_cases4 
+    by blast
+
+  obtain v\<^sub>2 ts\<^sub>2 \<C>\<^sub>2 \<V>\<^sub>2 where
+    te_\<phi>2: "tseitin fresh (\<V> \<union> \<V>\<^sub>1) \<phi>\<^sub>2 = (v\<^sub>2, ts\<^sub>2, \<C>\<^sub>2, \<V>\<^sub>2)"
+    using prod_cases4 
+    by blast
+
+  have
+    "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
+    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    unfolding atomize_conj
+    using Or.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
+    by (metis Pair_inject)
+
+  show ?case
+    by (simp add: \<V>'_def)
+qed
 
 end
