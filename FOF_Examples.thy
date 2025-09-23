@@ -1,4 +1,4 @@
-theory Examples
+theory FOF_Examples
   imports FOF_Base
 begin
 

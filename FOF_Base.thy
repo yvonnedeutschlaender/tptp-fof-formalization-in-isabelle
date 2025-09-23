@@ -102,7 +102,6 @@ fun nnf_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" whe
 "nnf_formula T = T" |
 "nnf_formula F = F"
 
-(*TODO: erweitern *)
 lemma excluded_middle: "eval_formula (Or f (Not f)) vI fI pI"
   by auto
 
