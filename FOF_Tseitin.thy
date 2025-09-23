@@ -305,7 +305,8 @@ lemma
   assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
   shows
     tseitin_generated_var: "v \<in> predicates_of_formula \<phi> \<union> \<V>'" and
-    tseitin_generated_vars: "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula \<phi> \<union> \<V>'"
+    tseitin_generated_vars: 
+      "insert v (\<Union>C \<in> set \<C>. fst ` atom ` set C) = predicates_of_formula \<phi> \<union> \<V>'"
   unfolding atomize_conj
   using assms
 proof (induction \<phi> arbitrary: \<V> v ts \<C> \<V>' rule: "is_nnf.induct")
@@ -863,7 +864,8 @@ next
 
   define pI' :: "'p \<Rightarrow> 'd list \<Rightarrow> bool" where
     "pI' = (\<lambda>x ds. 
-      if x = v then pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<and> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2) 
+      if x = v 
+      then pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<and> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2) 
       else (if x \<in> \<V>\<^sub>1 then pI1 x ds 
       else (if x \<in> \<V>\<^sub>2 then pI2 x ds 
       else pI x ds)))"
@@ -1267,7 +1269,8 @@ next
 
   define pI' :: "'p \<Rightarrow> 'd list \<Rightarrow> bool" where
     "pI' = (\<lambda>x ds. 
-      if x = v then pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<or> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2) 
+      if x = v 
+      then pI1 v\<^sub>1 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>1) \<or> pI2 v\<^sub>2 (map (\<lambda>t. eval_term t vI fI) ts\<^sub>2) 
       else (if x \<in> \<V>\<^sub>1 then pI1 x ds 
       else (if x \<in> \<V>\<^sub>2 then pI2 x ds 
       else pI x ds)))"
@@ -1938,9 +1941,7 @@ theorem tseitin_expansion_card_vars:
   sorry
 *)
 
-
 (*Proved but not used*)
-(**)
 lemma tseitin_fresh_var_in_fresh_var_set:
   assumes "is_nnf \<phi>"
   assumes "predicates_of_formula \<phi> \<subseteq> \<V>"
@@ -1991,13 +1992,13 @@ next
 
   have
     "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
-    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
     unfolding atomize_conj
     using And.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
     by (metis Pair_inject)
 
   show ?case
-    by (simp add: \<V>'_def)
+    by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
 next
   case (Or \<phi>\<^sub>1 \<phi>\<^sub>2)
 
@@ -2013,13 +2014,13 @@ next
 
   have
     "v = fresh (\<V> \<union> \<V>\<^sub>1 \<union> \<V>\<^sub>2)" and
-    \<V>'_def: "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
+    "\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)"
     unfolding atomize_conj
     using Or.prems[simplified, unfolded te_\<phi>1, simplified, unfolded te_\<phi>2, simplified]
     by (metis Pair_inject)
 
   show ?case
-    by (simp add: \<V>'_def)
+    by (simp add: \<open>\<V>' = insert v (\<V>\<^sub>1 \<union> \<V>\<^sub>2)\<close>)
 qed
 
 end

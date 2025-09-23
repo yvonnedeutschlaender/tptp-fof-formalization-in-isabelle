@@ -29,23 +29,23 @@ type_synonym ('p, 'd) I_pred = "'p \<Rightarrow> 'd list \<Rightarrow> bool"
 fun eval_formula ::
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'd) I_var \<Rightarrow> ('f, 'd) I_fun \<Rightarrow> ('p, 'd) I_pred \<Rightarrow> bool" where
 "eval_formula (Pred p args) vI fI pI = pI p (map (\<lambda>t. eval_term t vI fI) args) " |
-"eval_formula (And f1 f2) vI fI pI = ((eval_formula f1 vI fI pI) \<and> (eval_formula f2 vI fI pI))" |
-"eval_formula (Or f1 f2) vI fI pI = ((eval_formula f1 vI fI pI) \<or> (eval_formula f2 vI fI pI))" |
-"eval_formula (Not f) vI fI pI = (\<not>(eval_formula f vI fI pI))" |
+"eval_formula (And \<phi>1 \<phi>2) vI fI pI = ((eval_formula \<phi>1 vI fI pI) \<and> (eval_formula \<phi>2 vI fI pI))" |
+"eval_formula (Or \<phi>1 \<phi>2) vI fI pI = ((eval_formula \<phi>1 vI fI pI) \<or> (eval_formula \<phi>2 vI fI pI))" |
+"eval_formula (Not \<phi>) vI fI pI = (\<not>(eval_formula \<phi> vI fI pI))" |
 "eval_formula (Equal t1 t2) vI fI pI = ((eval_term t1 vI fI) = (eval_term t2 vI fI))" |
-"eval_formula (Forall v f) vI fI pI = (\<forall>x. eval_formula f (vI(v := x)) fI pI)" |
-"eval_formula (Exists v f) vI fI pI = (\<exists>x. eval_formula f (vI(v := x)) fI pI)" |
+"eval_formula (Forall v \<phi>) vI fI pI = (\<forall>x. eval_formula \<phi> (vI(v := x)) fI pI)" |
+"eval_formula (Exists v \<phi>) vI fI pI = (\<exists>x. eval_formula \<phi> (vI(v := x)) fI pI)" |
 "eval_formula T _ _ _ = True" |
 "eval_formula F _ _ _ = False"
 
 definition Imp :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"Imp f1 f2 = Or (Not f1) f2"
+"Imp \<phi>1 \<phi>2 = Or (Not \<phi>1) \<phi>2"
 
 definition Equiv :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"Equiv f1 f2 = And (Imp f1 f2) (Imp f2 f1)"
+"Equiv \<phi>1 \<phi>2 = And (Imp \<phi>1 \<phi>2) (Imp \<phi>2 \<phi>1)"
 
 definition Xor :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"Xor f1 f2 = Or (And (Not f1) f2) (And f1 (Not f2))"
+"Xor \<phi>1 \<phi>2 = Or (And (Not \<phi>1) \<phi>2) (And \<phi>1 (Not \<phi>2))"
 
 fun distribute_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
 "distribute_formula (Pred p args) = Pred p args" |
@@ -68,11 +68,11 @@ fun distribute_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formu
 
 fun demorg_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
 "demorg_formula (Pred p args) = Pred p args" |
-"demorg_formula (And \<phi> \<psi>) = And (demorg_formula \<phi>) (demorg_formula \<psi>)" |
-"demorg_formula (Or \<phi> \<psi>) = Or (demorg_formula \<phi>) (demorg_formula \<psi>)" |
+"demorg_formula (And \<phi>1 \<phi>2) = And (demorg_formula \<phi>1) (demorg_formula \<phi>2)" |
+"demorg_formula (Or \<phi>1 \<phi>2) = Or (demorg_formula \<phi>1) (demorg_formula \<phi>2)" |
 "demorg_formula (Not \<phi>) = (case demorg_formula \<phi> of
-  (And \<psi>1 \<psi>2) \<Rightarrow> Or (Not \<psi>1) (Not \<psi>2) |
-  (Or \<psi>1 \<psi>2) \<Rightarrow> And (Not \<psi>1) (Not \<psi>2) |
+  (And \<phi>1 \<phi>2) \<Rightarrow> Or (Not \<phi>1) (Not \<phi>2) |
+  (Or \<phi>1 \<phi>2) \<Rightarrow> And (Not \<phi>1) (Not \<phi>2) |
   \<phi>' \<Rightarrow> Not \<phi>'
 )" |
 "demorg_formula (Equal t1 t2) = Equal t1 t2" |
@@ -87,12 +87,12 @@ fun nnf_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" whe
 "nnf_formula (Or \<phi>1 \<phi>2) = Or (nnf_formula \<phi>1) (nnf_formula \<phi>2)" |
 "nnf_formula (Not \<phi>) = (case nnf_formula \<phi> of
   Pred p args \<Rightarrow> Not (Pred p args) |
-  And \<psi>1 \<psi>2 \<Rightarrow> demorg_formula (Not (And \<psi>1 \<psi>2)) |
-  Or \<psi>1 \<psi>2 \<Rightarrow> demorg_formula (Not (Or \<psi>1 \<psi>2)) |
-  Not \<psi> \<Rightarrow> \<psi> |
+  And \<phi>1 \<phi>2 \<Rightarrow> demorg_formula (Not (And \<phi>1 \<phi>2)) |
+  Or \<phi>1 \<phi>2 \<Rightarrow> demorg_formula (Not (Or \<phi>1 \<phi>2)) |
+  Not \<phi>1 \<Rightarrow> \<phi>1 |
   Equal t1 t2 \<Rightarrow> Not (Equal t1 t2) |
-  Forall v \<psi> \<Rightarrow> Exists v (Not \<psi>) |
-  Exists v \<psi> \<Rightarrow> Forall v (Not \<psi>) |
+  Forall v \<phi>1 \<Rightarrow> Exists v (Not \<phi>1) |
+  Exists v \<phi>1 \<Rightarrow> Forall v (Not \<phi>1) |
   T \<Rightarrow> F |
   F \<Rightarrow> T
 )" |
@@ -102,13 +102,15 @@ fun nnf_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" whe
 "nnf_formula T = T" |
 "nnf_formula F = F"
 
-lemma excluded_middle: "eval_formula (Or f (Not f)) vI fI pI"
+lemma excluded_middle: "eval_formula (Or \<phi> (Not \<phi>)) vI fI pI"
   by auto
 
-lemma and_de_morgan: "eval_formula (Not (And f1 f2)) vI fI pI = eval_formula (Or (Not f1) (Not f2)) vI fI pI"
+lemma and_de_morgan: 
+  "eval_formula (Not (And \<phi>1 \<phi>2)) vI fI pI = eval_formula (Or (Not \<phi>1) (Not \<phi>2)) vI fI pI"
   by auto
 
-lemma or_de_morgan: "eval_formula (Not (Or f1 f2)) vI fI pI = eval_formula (And (Not f1) (Not f2)) vI fI pI"
+lemma or_de_morgan: 
+  "eval_formula (Not (Or \<phi>1 \<phi>2)) vI fI pI = eval_formula (And (Not \<phi>1) (Not \<phi>2)) vI fI pI"
   by auto
 
 end                                          

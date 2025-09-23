@@ -4,26 +4,26 @@ begin
 
 fun simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
 "simp_formula (Pred p args) = Pred p args" |
-"simp_formula (And f1 f2) = (case (simp_formula f1, simp_formula f2) of
+"simp_formula (And \<phi>1 \<phi>2) = (case (simp_formula \<phi>1, simp_formula \<phi>2) of
   (T, T) \<Rightarrow> T |
   (F, _) \<Rightarrow> F |
   (_, F) \<Rightarrow> F |
-  (T, f2') \<Rightarrow> f2' |
-  (f1', T) \<Rightarrow> f1' |
-  (f1', f2') \<Rightarrow> And f1' f2'
+  (T, \<phi>2') \<Rightarrow> \<phi>2' |
+  (\<phi>1', T) \<Rightarrow> \<phi>1' |
+  (\<phi>1', \<phi>2') \<Rightarrow> And \<phi>1' \<phi>2'
 )" |
-"simp_formula (Or f1 f2) = (case (simp_formula f1, simp_formula f2) of
+"simp_formula (Or \<phi>1 \<phi>2) = (case (simp_formula \<phi>1, simp_formula \<phi>2) of
   (F, F) \<Rightarrow> F |
   (T, _) \<Rightarrow> T |
   (_, T) \<Rightarrow> T |
-  (F, f2') \<Rightarrow> f2' |
-  (f1', F) \<Rightarrow> f1' |
-  (f1', f2') \<Rightarrow> Or f1' f2'
+  (F, \<phi>2') \<Rightarrow> \<phi>2' |
+  (\<phi>1', F) \<Rightarrow> \<phi>1' |
+  (\<phi>1', \<phi>2') \<Rightarrow> Or \<phi>1' \<phi>2'
 )" |
 "simp_formula (Not f) = (case simp_formula f of
   T \<Rightarrow> F |
   F \<Rightarrow> T |
-  Not f1 \<Rightarrow> f1 |
+  Not \<phi>1 \<Rightarrow> \<phi>1 |
   f' \<Rightarrow> Not f'
 )" |
 "simp_formula (Equal t1 t2) = Equal t1 t2" |
@@ -41,10 +41,12 @@ proof (cases "simp_formula \<phi>1")
   then show ?thesis
   proof (cases "simp_formula \<phi>2")
     case (Pred p2 args2)
-    have "eval_formula (simp_formula (And \<phi>1 \<phi>2)) vI fI pI = eval_formula (And (Pred p1 args1) (Pred p2 args2)) vI fI pI"
+    have "eval_formula (simp_formula (And \<phi>1 \<phi>2)) vI fI pI 
+      = eval_formula (And (Pred p1 args1) (Pred p2 args2)) vI fI pI"
       using `simp_formula \<phi>1 = (Pred p1 args1)` `simp_formula \<phi>2 = (Pred p2 args2)`
       by simp
-    also have "... = ((eval_formula (Pred p1 args1) vI fI pI) \<and> (eval_formula (Pred p2 args2) vI fI pI))"
+    also have "... = ((eval_formula (Pred p1 args1) vI fI pI) \<and> 
+                      (eval_formula (Pred p2 args2) vI fI pI))"
       by simp
     also have "... = eval_formula (And \<phi>1 \<phi>2) vI fI pI"
       using `simp_formula \<phi>1 = (Pred p1 args1)` `simp_formula \<phi>2 = (Pred p2 args2)` IH1 IH2
@@ -374,10 +376,12 @@ proof (cases "simp_formula \<phi>1")
   then show ?thesis
   proof (cases "simp_formula \<phi>2")
     case (Pred p2 args2)
-    have "eval_formula (simp_formula (Or \<phi>1 \<phi>2)) vI fI pI = eval_formula (Or (Pred p1 args1) (Pred p2 args2)) vI fI pI"
+    have "eval_formula (simp_formula (Or \<phi>1 \<phi>2)) vI fI pI 
+      = eval_formula (Or (Pred p1 args1) (Pred p2 args2)) vI fI pI"
       using `simp_formula \<phi>1 = (Pred p1 args1)` `simp_formula \<phi>2 = (Pred p2 args2)`
       by simp
-    also have "... = ((eval_formula (Pred p1 args1) vI fI pI) \<or> (eval_formula (Pred p2 args2) vI fI pI))"
+    also have "... = ((eval_formula (Pred p1 args1) vI fI pI) \<or> 
+                      (eval_formula (Pred p2 args2) vI fI pI))"
       by simp
     also have "... = eval_formula (Or \<phi>1 \<phi>2) vI fI pI"
       using `simp_formula \<phi>1 = (Pred p1 args1)` `simp_formula \<phi>2 = (Pred p2 args2)` IH1 IH2
@@ -764,7 +768,8 @@ next
   finally show ?thesis .
 qed
 
-theorem eval_formula_simp_formula_equiv_eval_formula: "eval_formula (simp_formula \<phi>) vI fI pI = eval_formula \<phi> vI fI pI"
+theorem eval_formula_simp_formula_equiv_eval_formula: 
+  "eval_formula (simp_formula \<phi>) vI fI pI = eval_formula \<phi> vI fI pI"
 proof (induction \<phi> arbitrary: vI rule: simp_formula.induct)
   case (1 p args)
   then show ?case by simp

@@ -4,9 +4,9 @@ begin
 
 inductive is_prop :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
 Prop: "is_prop (Pred p [])" |
-And: "is_prop f1 \<Longrightarrow> is_prop f2 \<Longrightarrow> is_prop (And f1 f2)" |
-Or: "is_prop f1 \<Longrightarrow> is_prop f2 \<Longrightarrow> is_prop (Or f1 f2)" |
-Not: "is_prop f \<Longrightarrow> is_prop (Not f)"
+And: "is_prop \<phi>1 \<Longrightarrow> is_prop \<phi>2 \<Longrightarrow> is_prop (And \<phi>1 \<phi>2)" |
+Or: "is_prop \<phi>1 \<Longrightarrow> is_prop \<phi>2 \<Longrightarrow> is_prop (Or \<phi>1 \<phi>2)" |
+Not: "is_prop \<phi> \<Longrightarrow> is_prop (Not \<phi>)"
 
 inductive is_prop_literal :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
 Prop: "is_prop_literal (Pred p [])" |
@@ -15,16 +15,16 @@ NProp: "is_prop_literal (Not (Pred p []))"
 inductive is_prop_nnf :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
 Prop: "is_prop_nnf (Pred p [])" |
 NProp: "is_prop_nnf (Not (Pred p []))" |
-And: "is_prop_nnf f1 \<Longrightarrow> is_prop_nnf f2 \<Longrightarrow> is_prop_nnf (And f1 f2)" |
-Or: "is_prop_nnf f1 \<Longrightarrow> is_prop_nnf f2 \<Longrightarrow> is_prop_nnf (Or f1 f2)"
+And: "is_prop_nnf \<phi>1 \<Longrightarrow> is_prop_nnf \<phi>2 \<Longrightarrow> is_prop_nnf (And \<phi>1 \<phi>2)" |
+Or: "is_prop_nnf \<phi>1 \<Longrightarrow> is_prop_nnf \<phi>2 \<Longrightarrow> is_prop_nnf (Or \<phi>1 \<phi>2)"
 
 inductive is_prop_clause :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
-Literal: "is_prop_literal f \<Longrightarrow> is_prop_clause f" |
-Or: "is_prop_literal f1 \<Longrightarrow> is_prop_literal f2 \<Longrightarrow> is_prop_clause (Or f1 f2)"
+Literal: "is_prop_literal \<phi> \<Longrightarrow> is_prop_clause \<phi>" |
+Or: "is_prop_literal \<phi>1 \<Longrightarrow> is_prop_literal \<phi>2 \<Longrightarrow> is_prop_clause (Or \<phi>1 \<phi>2)"
 
 inductive is_cnf :: "('v, 'f, 'p) formula \<Rightarrow> bool" where
-Literal: "is_prop_literal f \<Longrightarrow> is_cnf f" |
-And: "is_prop_clause f1 \<Longrightarrow> is_prop_clause f2 \<Longrightarrow> is_cnf (And f1 f2)" 
+Literal: "is_prop_literal \<phi> \<Longrightarrow> is_cnf \<phi>" |
+And: "is_prop_clause \<phi>1 \<Longrightarrow> is_prop_clause \<phi>2 \<Longrightarrow> is_cnf (And \<phi>1 \<phi>2)" 
 
 type_synonym 'p fresh = "'p set \<Rightarrow> 'p"
 type_synonym ('v, 'f, 'p) tseitin_asgnm = "'p \<times> ('v, 'f, 'p) formula"
@@ -32,15 +32,15 @@ type_synonym ('v, 'f, 'p) tseitin_asgnm = "'p \<times> ('v, 'f, 'p) formula"
 fun tseitin_occup_var :: "('v, 'f, 'p) formula \<Rightarrow> 'p set" where
 "tseitin_occup_var (Pred p []) = {p}" |
 "tseitin_occup_var (Not (Pred p [])) = {p}" |
-"tseitin_occup_var (And f1 f2) = tseitin_occup_var f1 \<union> tseitin_occup_var f2" |
-"tseitin_occup_var (Or f1 f2) = tseitin_occup_var f1 \<union> tseitin_occup_var f2" |
+"tseitin_occup_var (And \<phi>1 \<phi>2) = tseitin_occup_var \<phi>1 \<union> tseitin_occup_var \<phi>2" |
+"tseitin_occup_var (Or \<phi>1 \<phi>2) = tseitin_occup_var \<phi>1 \<union> tseitin_occup_var \<phi>2" |
 "tseitin_occup_var _ = {}"
 
 fun tseitin_list :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula list" where
 "tseitin_list (Pred p []) = []" |
 "tseitin_list (Not (Pred p [])) = [Not (Pred p [])]" |
-"tseitin_list (And f1 f2) = [And f1 f2] @ tseitin_list f1 @ tseitin_list f2" |
-"tseitin_list (Or f1 f2) = [Or f1 f2] @ tseitin_list f1 @ tseitin_list f2" |
+"tseitin_list (And \<phi>1 \<phi>2) = And \<phi>1 \<phi>2 # tseitin_list \<phi>1 @ tseitin_list \<phi>2" |
+"tseitin_list (Or \<phi>1 \<phi>2) = Or \<phi>1 \<phi>2 # tseitin_list \<phi>1 @ tseitin_list \<phi>2" |
 "tseitin_list _ = []"
 
 definition tseitin_fresh_var :: "'p fresh \<Rightarrow> 'p set \<Rightarrow> 'p \<times> 'p set" where
@@ -49,39 +49,39 @@ definition tseitin_fresh_var :: "'p fresh \<Rightarrow> 'p set \<Rightarrow> 'p 
 fun tseitin_list_asgnm :: 
 "'p fresh \<Rightarrow> 'p set \<Rightarrow> ('v, 'f, 'p) formula list \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm list" where
 "tseitin_list_asgnm \<xi> \<Sigma> [] = []" |
-"tseitin_list_asgnm \<xi> \<Sigma> (f # fs) = 
+"tseitin_list_asgnm \<xi> \<Sigma> (\<phi> # \<phi>s) = 
   (let fresh_var = tseitin_fresh_var \<xi> \<Sigma>;
-       assign_var = ((fst fresh_var), f)
-    in assign_var # tseitin_list_asgnm \<xi> (snd fresh_var) fs)"
+       assign_var = ((fst fresh_var), \<phi>)
+    in assign_var # tseitin_list_asgnm \<xi> (snd fresh_var) \<phi>s)"
 
 fun tseitin_subst_formula ::
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm list \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_subst_formula f [] = f" |
-"tseitin_subst_formula f (a # as) = 
-  (if (f = snd a) 
+"tseitin_subst_formula \<phi> [] = \<phi>" |
+"tseitin_subst_formula \<phi> (a # as) = 
+  (if (\<phi> = snd a) 
    then Pred (fst a) []
-   else tseitin_subst_formula f as)"
+   else tseitin_subst_formula \<phi> as)"
 
 fun tseitin_subst_subformula :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm list \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_subst_subformula f [] = f" |
+"tseitin_subst_subformula \<phi> [] = \<phi>" |
 "tseitin_subst_subformula (Pred p []) _ = Pred p []" |
 "tseitin_subst_subformula (Not (Pred p [])) _ = Not (Pred p [])" |
-"tseitin_subst_subformula (And f1 f2) as = 
-  (let f1_subst = tseitin_subst_formula f1 as;
-       f2_subst = tseitin_subst_formula f2 as
-    in And f1_subst f2_subst)" |
-"tseitin_subst_subformula (Or f1 f2) as =
-  (let f1_subst = tseitin_subst_formula f1 as;
-       f2_subst = tseitin_subst_formula f2 as
-    in Or f1_subst f2_subst)" |
-"tseitin_subst_subformula f _ = f"
+"tseitin_subst_subformula (And \<phi>1 \<phi>2) as = 
+  (let \<phi>1_subst = tseitin_subst_formula \<phi>1 as;
+       \<phi>2_subst = tseitin_subst_formula \<phi>2 as
+    in And \<phi>1_subst \<phi>2_subst)" |
+"tseitin_subst_subformula (Or \<phi>1 \<phi>2) as =
+  (let \<phi>1_subst = tseitin_subst_formula \<phi>1 as;
+       \<phi>2_subst = tseitin_subst_formula \<phi>2 as
+    in Or \<phi>1_subst \<phi>2_subst)" |
+"tseitin_subst_subformula \<phi> _ = \<phi>"
 
 fun tseitin_list_subst :: "('v, 'f, 'p) tseitin_asgnm list \<Rightarrow> ('v, 'f, 'p) tseitin_asgnm list" where
 "tseitin_list_subst [] = []" |
-"tseitin_list_subst ((\<tau>, f) # as) =
-  (let f' = tseitin_subst_subformula f as
-    in (\<tau>, f') # tseitin_list_subst as)"
+"tseitin_list_subst ((\<tau>, \<phi>) # as) =
+  (let \<phi>' = tseitin_subst_subformula \<phi> as
+    in (\<tau>, \<phi>') # tseitin_list_subst as)"
 
 (*
 fun tseitin_simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
