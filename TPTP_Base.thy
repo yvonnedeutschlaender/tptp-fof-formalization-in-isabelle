@@ -15,6 +15,7 @@ Conjecture
 datatype ('n, 'v, 'f, 'p) annot_formula =
 FOF "'n name" role "('v, 'f, 'p) formula"
 
-type_synonym ('n, 'v, 'f, 'p) TPTP_file = "('n, 'v, 'f, 'p) annot_formula list"
+datatype ('n, 'v, 'f, 'p) TPTP_file = 
+Input "('n, 'v, 'f, 'p) annot_formula list"
 
 end
