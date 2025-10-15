@@ -1,1 +1,1 @@
-# Bachelorarbeit - Isabelle
+# Formalization of a TPTP Logic in Isabelle/HOL
