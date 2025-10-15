@@ -1,1 +1,1 @@
-# Formalization of a TPTP Logic in Isabelle/HOL
+# Formalization of a subset of TPTP First-order Logic (FOF) in Isabelle/HOL
