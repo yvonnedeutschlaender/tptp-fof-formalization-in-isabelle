@@ -1,4 +1,4 @@
-theory FOF_Tseitin_Initial
+theory FOF_Tseitin_Failed_Proof
   imports Main FOF_Base FOF_Simplify
 begin
 
@@ -83,18 +83,6 @@ fun tseitin_list_subst :: "('v, 'f, 'p) tseitin_asgnm list \<Rightarrow> ('v, 'f
   (let \<phi>' = tseitin_subst_subformula \<phi> as
     in (\<tau>, \<phi>') # tseitin_list_subst as)"
 
-(*
-fun tseitin_simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
-"tseitin_simp_formula (Pred p []) = Pred p []" |
-"tseitin_simp_formula (And \<phi>1 \<phi>2) = And (tseitin_simp_formula \<phi>1) (tseitin_simp_formula \<phi>2)" |
-"tseitin_simp_formula (Or \<phi>1 \<phi>2) = Or (tseitin_simp_formula \<phi>1) (tseitin_simp_formula \<phi>2)" |
-"tseitin_simp_formula (Not \<phi>) = (case tseitin_simp_formula \<phi> of
-  Pred p [] \<Rightarrow> Not (Pred p []) |
-  Not (Pred p []) \<Rightarrow> Pred p []
-)" |
-"tseitin_simp_formula \<phi> = \<phi>"
-*)
-
 fun tseitin_equiv_binding :: 
 "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" where
 "tseitin_equiv_binding (Pred _ []) l r = And l r" |
@@ -168,31 +156,5 @@ proof -
     unfolding tseitin_expansion_def tseitin_occup_var.simps decompose Let_def
     by simp
 qed 
-
-theorem eval_tseitin_equiv_eval:
-  fixes fresh :: "'p set \<Rightarrow> 'p" and \<phi> :: "('v, 'f, 'p) formula"
-  assumes "\<And>\<P>. finite \<P> \<Longrightarrow> fresh \<P> \<notin> \<P>"
-  assumes "is_prop_nnf \<phi>"
-  shows "(\<exists>pI. eval_formula (tseitin_expansion fresh \<phi>) vI fI pI) 
-    \<longleftrightarrow> (\<exists>pI. eval_formula \<phi> vI fI pI)"
-  (is "?LHS \<longleftrightarrow> ?RHS")
-  using \<open>is_prop_nnf \<phi>\<close>
-proof (induction \<phi> rule: is_prop_nnf.induct)
-  case (Prop p)
-  then show ?case
-    by (simp add: assms(1) tseitin_Prop_empty_args)
-next
-  case (NProp p)
-  then show ?case
-    sorry
-next
-  case (And f1 f2)
-  then show ?case
-    sorry
-next
-  case (Or f1 f2)
-  then show ?case
-    sorry
-qed
 
 end

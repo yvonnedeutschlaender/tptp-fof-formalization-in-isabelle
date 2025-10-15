@@ -87,8 +87,8 @@ fun nnf_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" whe
 "nnf_formula (Or \<phi>1 \<phi>2) = Or (nnf_formula \<phi>1) (nnf_formula \<phi>2)" |
 "nnf_formula (Not \<phi>) = (case nnf_formula \<phi> of
   Pred p args \<Rightarrow> Not (Pred p args) |
-  And \<phi>1 \<phi>2 \<Rightarrow> demorg_formula (Not (And \<phi>1 \<phi>2)) |
-  Or \<phi>1 \<phi>2 \<Rightarrow> demorg_formula (Not (Or \<phi>1 \<phi>2)) |
+  And \<phi>1 \<phi>2 \<Rightarrow> Or (Not \<phi>1) (Not \<phi>2) |
+  Or \<phi>1 \<phi>2 \<Rightarrow> And (Not \<phi>1) (Not \<phi>2) |
   Not \<phi>1 \<Rightarrow> \<phi>1 |
   Equal t1 t2 \<Rightarrow> Not (Equal t1 t2) |
   Forall v \<phi>1 \<Rightarrow> Exists v (Not \<phi>1) |

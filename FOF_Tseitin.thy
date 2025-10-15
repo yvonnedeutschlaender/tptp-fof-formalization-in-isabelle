@@ -788,15 +788,14 @@ next
   proof (intro exI conjI ballI)
     fix x
     assume \<open>x \<in> predicates_of_formula (Not (Pred p ts\<^sub>p))\<close>
-    then have "x \<in> \<V>"
-      using NegPred.prems(2) 
-      by auto
-    have "x \<noteq> v"
-      using \<open>x \<in> \<V>\<close> \<open>v \<notin> \<V>\<close>
+    then have "x = p"
+      by simp
+    have "p \<noteq> v"
+      using NegPred.prems(2) \<open>v \<notin> \<V>\<close>
       by auto
     show "pI' x = pI x"
       unfolding pI'_def
-      using \<open>x \<in> \<V>\<close> \<open>x \<noteq> v\<close>
+      using \<open>x = p\<close> \<open>p \<noteq> v\<close>
       by simp
   next
     show "eval_formula (formula_of_clause_list \<C>) vI fI pI'"
@@ -1630,7 +1629,7 @@ next
   qed
 qed
 
-lemma model_for_tseitin_is_model_for_formula:
+theorem model_for_tseitin_is_model_for_formula:
   fixes fresh :: "'p set \<Rightarrow> 'p"
   assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
   fixes \<phi> :: "('v, 'f, 'p) formula" and pI :: "'p \<Rightarrow> 'd list \<Rightarrow> bool"
