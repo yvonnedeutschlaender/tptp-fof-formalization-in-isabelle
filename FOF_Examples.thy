@@ -150,16 +150,16 @@ lemma unsatisfiable_f14: "\<not> eval_formula f14 vI fI pI"
 section \<open>simp_formula\<close>
 
 definition f15 :: "(string, string, string) formula" where
-"f15 = Forall ''v'' (Or (And F (Pred ''a'' [])) (Not (Not (Pred ''b'' []))))"
+"f15 = Forall ''v'' (Or (And F (Pred ''a'' [])) (Not (Not (Pred ''b'' [Var ''v'']))))"
 
 definition f16 :: "(string, string, string) formula" where
 "f16 = And (Pred ''a'' []) (Equal (Fun ''c1'' []) (Fun ''c2'' []))"
 
 lemma "eval_formula f15 vI fI pI = eval_formula (simp_formula f15) vI fI pI"
-  by (simp add: eval_formula_simp_formula_equiv_eval_formula)
+  by (simp add: eval_formula_simp_formula_eq_eval_formula)
 
 lemma "eval_formula f16 vI fI pI = eval_formula (simp_formula f16) vI fI pI"
-  by (simp add: eval_formula_simp_formula_equiv_eval_formula)
+  by (simp add: eval_formula_simp_formula_eq_eval_formula)
 
 lemma "simp_formula f16 = f16"
   unfolding f16_def

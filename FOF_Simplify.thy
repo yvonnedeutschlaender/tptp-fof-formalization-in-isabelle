@@ -32,7 +32,7 @@ fun simp_formula :: "('v, 'f, 'p) formula \<Rightarrow> ('v, 'f, 'p) formula" wh
 "simp_formula T = T" |
 "simp_formula F = F"
 
-lemma eval_formula_simp_formula_And_equiv:
+lemma eval_formula_simp_formula_And_eq:
   assumes IH1: "eval_formula (simp_formula \<phi>1) vI fI pI = eval_formula \<phi>1 vI fI pI" 
       and IH2: "eval_formula (simp_formula \<phi>2) vI fI pI = eval_formula \<phi>2 vI fI pI"
     shows "eval_formula (simp_formula (And \<phi>1 \<phi>2)) vI fI pI = eval_formula (And \<phi>1 \<phi>2) vI fI pI"
@@ -367,7 +367,7 @@ next
   qed
 qed
 
-lemma eval_formula_simp_formula_Or_equiv:
+lemma eval_formula_simp_formula_Or_eq:
   assumes IH1: "eval_formula (simp_formula \<phi>1) vI fI pI = eval_formula \<phi>1 vI fI pI" 
       and IH2: "eval_formula (simp_formula \<phi>2) vI fI pI = eval_formula \<phi>2 vI fI pI"
     shows "eval_formula (simp_formula (Or \<phi>1 \<phi>2)) vI fI pI = eval_formula (Or \<phi>1 \<phi>2) vI fI pI"
@@ -702,7 +702,7 @@ next
   qed
 qed
 
-lemma eval_formula_simp_formula_Not_equiv:
+lemma eval_formula_simp_formula_Not_eq:
   assumes IH: "eval_formula (simp_formula \<phi>) vI fI pI = eval_formula \<phi> vI fI pI"
   shows "eval_formula (simp_formula (Not \<phi>)) vI fI pI = eval_formula (Not \<phi>) vI fI pI"
 proof (cases "simp_formula \<phi>")
@@ -768,20 +768,20 @@ next
   finally show ?thesis .
 qed
 
-theorem eval_formula_simp_formula_equiv_eval_formula: 
+theorem eval_formula_simp_formula_eq_eval_formula: 
   "eval_formula (simp_formula \<phi>) vI fI pI = eval_formula \<phi> vI fI pI"
 proof (induction \<phi> arbitrary: vI rule: simp_formula.induct)
   case (1 p args)
   then show ?case by simp
 next
   case (2 f1 f2)
-  then show ?case by (rule eval_formula_simp_formula_And_equiv)
+  then show ?case by (rule eval_formula_simp_formula_And_eq)
 next
   case (3 f1 f2)
-  then show ?case by (rule eval_formula_simp_formula_Or_equiv)
+  then show ?case by (rule eval_formula_simp_formula_Or_eq)
 next
   case (4 f)
-  then show ?case by (rule eval_formula_simp_formula_Not_equiv)
+  then show ?case by (rule eval_formula_simp_formula_Not_eq)
 next
   case (5 t1 t2)
   then show ?case by simp
