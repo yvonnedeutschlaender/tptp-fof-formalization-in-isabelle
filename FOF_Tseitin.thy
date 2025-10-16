@@ -714,12 +714,11 @@ qed
 
 theorem tseitin_spec:
   fixes fresh :: "'p set \<Rightarrow> 'p"
+  fixes \<phi> :: "('v, 'f, 'p) formula" and pI :: "'p \<Rightarrow> 'd list \<Rightarrow> bool"
   assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
-  fixes \<phi> :: "('v, 'f, 'p) formula"
   assumes "is_nnf \<phi>"
   assumes "finite \<V>" and "predicates_of_formula \<phi> \<subseteq> \<V>"
   assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
-  fixes pI :: "'p \<Rightarrow> 'd list \<Rightarrow> bool"
   shows "\<exists>pI'.
     (\<forall>x \<in> predicates_of_formula \<phi>. pI' x = pI x) \<and>
     eval_formula (formula_of_clause_list \<C>) vI fI pI' \<and>
@@ -1631,8 +1630,8 @@ qed
 
 theorem model_for_tseitin_is_model_for_formula:
   fixes fresh :: "'p set \<Rightarrow> 'p"
-  assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
   fixes \<phi> :: "('v, 'f, 'p) formula" and pI :: "'p \<Rightarrow> 'd list \<Rightarrow> bool"
+  assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
   assumes "is_nnf \<phi>"
   assumes "finite \<V>" and "predicates_of_formula \<phi> \<subseteq> \<V>"
   assumes tseitin: "tseitin fresh \<V> \<phi> = (v, ts, \<C>, \<V>')"
@@ -1890,8 +1889,8 @@ definition tseitin_expansion where
 
 theorem tseitin_expansion_equisat:
   fixes fresh :: "'p set \<Rightarrow> 'p"
-  assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
   fixes \<phi> :: "('v, 'f, 'p) formula"
+  assumes fresh_spec: "\<And>\<V>. finite \<V> \<Longrightarrow> fresh \<V> \<notin> \<V>"
   assumes "is_nnf \<phi>"
   shows "(\<exists>pI. eval_formula \<phi> vI fI pI) \<longleftrightarrow>
     (\<exists>pI. eval_formula (tseitin_expansion fresh \<phi>) vI fI pI)"
